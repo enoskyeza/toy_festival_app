@@ -33,7 +33,7 @@ class Child(models.Model):
     payment_status = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
     parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=False, null=True)
 
-    def _str_(self):
+    def __str__(self):
         return f'{self.first_name} {self.second_name}'
 
 
@@ -52,6 +52,9 @@ class Parent(models.Model):
         max_length=13,
         validators=[MinLengthValidator(10, message="Phone number must have at least 10 digits")]
     )
+
+    def __str__(self):
+        return f'{self.first_name} {self.second_name}'
 
 class Judge:
     pass
