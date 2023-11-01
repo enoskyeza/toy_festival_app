@@ -15,7 +15,8 @@
 	</head>
 	<body>
 		<div class="wrapper">
-            <form action="" id="wizard">
+            <form method="POST" action="" id="wizard">
+				{% csrf_token %}
         		<!-- SECTION 1 -->
                 <h2></h2>
                 <section>

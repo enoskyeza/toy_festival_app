@@ -19,3 +19,6 @@ def home(request):
         'posts': posts
     }
     return render(request, 'reg/home.html', context)
+
+def register(request):
+    pass
