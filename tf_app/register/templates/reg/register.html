@@ -1,98 +1,102 @@
-{% extends "base.html" %}
+
+{% extends "reg/base.html" %}
+
+{% load static %}
 
 {% block content %}
-
-<form method="POST" action="" id="wizard">
-	<h2></h2>
-	<section>
-		<div class="inner">
-			<div class="image-holder">
-				<img src="{% static 'reg/images/form-04.jpg' %}" alt="">
-			</div>
-			<div class="form-content" >
-				<div class="form-header">
-					<h3>Parent Section</h3>
+	<form method="POST" action="" id="wizard">
+		{% csrf_token %}
+		<!-- SECTION 1 -->
+		<h2></h2>
+		<section>
+			<div class="inner">
+				<div class="image-holder">
+					<img src="{% static 'reg/images/form-04.jpg' %}" alt="">
 				</div>
-				<p>Please fill with parent's details</p>
-				{% comment %} <div class="form-row">
-					<div class="form-holder">
-						<input type="text" name="first_name" value="{{combined_form.parent.first_name.value}}" placeholder="First Name" class="form-control">
+				<div class="form-content" >
+					<div class="form-header">
+						<h3>Parent Section</h3>
 					</div>
-					<div class="form-holder">
-						<input type="text" name="last_name" value="{{combined_form.parent.last_name.value}}" placeholder="Last Name" class="form-control">
+					<p>Please fill with parent's details</p>
+					{% comment %} <div class="form-row">
+						<div class="form-holder">
+							<input type="text" name="first_name" value="{{combined_form.parent.first_name.value}}" placeholder="First Name" class="form-control">
+						</div>
+						<div class="form-holder">
+							<input type="text" name="last_name" value="{{combined_form.parent.last_name.value}}" placeholder="Last Name" class="form-control">
+						</div>
 					</div>
+					<div class="form-row">
+						<div class="form-holder">
+							<input type="text" name="proffession" value="{{combined_form.parent.proffession.value}}" placeholder="Proffession" class="form-control">
+						</div>
+						<div class="form-holder">
+							<input type="text" name="address" value="{{combined_form.parent.address.value}}" placeholder="Address" class="form-control">
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-holder">
+							<input type="text" name="email" value="{{combined_form.parent.email.value}}" placeholder="Email" class="form-control">
+						</div>
+						<div class="form-holder">
+							<input type="text" name="phone_number" value="{{combined_form.parent.email.value}}" placeholder="Phone Number" class="form-control">
+						</div>
+					</div> {% endcomment %}
+
+					{% comment %} {{ combined_form.parent.first_name }}
+					{{ combined_form.parent.last_name }}
+					{{ combined_form.parent.proffession }}
+					{{ combined_form.parent.address }}
+					{{ combined_form.parent.email }}
+					{{ combined_form.parent.phone_number }} {% endcomment %}
+
+					{{ form }}
 				</div>
-				<div class="form-row">
-					<div class="form-holder">
-						<input type="text" name="proffession" value="{{combined_form.parent.proffession.value}}" placeholder="Proffession" class="form-control">
-					</div>
-					<div class="form-holder">
-						<input type="text" name="address" value="{{combined_form.parent.address.value}}" placeholder="Address" class="form-control">
-					</div>
+			</div>
+		</section>
+
+		<!-- SECTION 2 -->
+		<h2></h2>
+		<section>
+			<div class="inner">
+				<div class="image-holder">
+					<img src="{% static 'reg/images/form-05.jpg' %}" alt="">
 				</div>
-				<div class="form-row">
-					<div class="form-holder">
-						<input type="text" name="email" value="{{combined_form.parent.email.value}}" placeholder="Email" class="form-control">
+				<div class="form-content">
+					<div class="form-header">
+						<h3>Particitpant's Section</h3>
 					</div>
-					<div class="form-holder">
-						<input type="text" name="phone_number" value="{{combined_form.parent.email.value}}" placeholder="Phone Number" class="form-control">
+					<p>Please fill with Particitpant's info</p>
+					{% comment %} {{ combined_form.child.first_name }}
+					{{ combined_form.child.last_name }}
+					{{ combined_form.child.age }}
+					{{ combined_form.child.gender }}
+					{{ combined_form.child.school }} {% endcomment %}
+
+				</div>
+			</div>
+		</section>
+
+		<!-- SECTION 3 -->
+		<h2></h2>
+		<section>
+			<div class="inner">
+				<div class="image-holder">
+					<img src="{% static 'reg/images/form-06.jpg' %}" alt="">
+				</div>
+				<div class="form-content">
+					<div class="form-header">
+						<h3>Payment Section</h3>
 					</div>
-				</div> {% endcomment %}
+					<p>Method of Payment</p>
 
-				{% comment %} {{ combined_form.parent.first_name }}
-				{{ combined_form.parent.last_name }}
-				{{ combined_form.parent.proffession }}
-				{{ combined_form.parent.address }}
-				{{ combined_form.parent.email }}
-				{{ combined_form.parent.phone_number }} {% endcomment %}
+					{% comment %} {{ combined_form.payment.pay_type }}
+					{{ combined_form.payment.pay_status }} {% endcomment %}
 
-				{{ form }}
-			</div>
-		</div>
-	</section>
-
-	<!-- SECTION 2 -->
-	<h2></h2>
-	<section>
-		<div class="inner">
-			<div class="image-holder">
-				<img src="{% static 'reg/images/form-05.jpg' %}" alt="">
-			</div>
-			<div class="form-content">
-				<div class="form-header">
-					<h3>Particitpant's Section</h3>
 				</div>
-				<p>Please fill with Particitpant's info</p>
-				{% comment %} {{ combined_form.child.first_name }}
-				{{ combined_form.child.last_name }}
-				{{ combined_form.child.age }}
-				{{ combined_form.child.gender }}
-				{{ combined_form.child.school }} {% endcomment %}
-
 			</div>
-		</div>
-	</section>
-
-	<!-- SECTION 3 -->
-	<h2></h2>
-	<section>
-		<div class="inner">
-			<div class="image-holder">
-				<img src="{% static 'reg/images/form-06.jpg' %}" alt="">
-			</div>
-			<div class="form-content">
-				<div class="form-header">
-					<h3>Payment Section</h3>
-				</div>
-				<p>Method of Payment</p>
-
-				{% comment %} {{ combined_form.payment.pay_type }}
-				{{ combined_form.payment.pay_status }} {% endcomment %}
-
-			</div>
-		</div>
-	</section>
-	<button type="submit">Register</button>
-</form>
+		</section>
+		<button type="submit">Register</button>
+	</form>
 
 {% endblock %}
