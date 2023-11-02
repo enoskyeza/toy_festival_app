@@ -25,21 +25,21 @@ class Child(models.Model):
 
 
     first_name = models.CharField(max_length=100)
-    second_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     email = models.EmailField(max_length=254, blank='True')
     age = models.IntegerField()
     gender = models.CharField(max_length=1, choices=ChildGender.choices)
     school = models.CharField(max_length=100)
     payment_status = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
-    parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=False, null=True)
+    parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=True, null=True)
 
     def __str__(self):
-        return f'{self.first_name} {self.second_name}'
+        return f'{self.first_name} {self.last_name}'
 
 
 class Parent(models.Model):
     first_name = models.CharField(max_length=100)
-    second_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
     proffession = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
 
@@ -54,7 +54,7 @@ class Parent(models.Model):
     )
 
     def __str__(self):
-        return f'{self.first_name} {self.second_name}'
+        return f'{self.first_name} {self.last_name}'
 
 class Judge:
     pass
