@@ -103,7 +103,7 @@
 				</div>
 				<div class="form-content">
 					<div class="form-header">
-						<h3>Payment Section</h3>
+						<h3>Payment</h3>
 					</div>
 					<p>Choose method of payment</p>
 
@@ -115,13 +115,13 @@
 										{{ radio.tag }} {{ radio.choice_label}} <br>
 										<span class="checkmark"></span>
 									</label> <br>
-									<p>Payment to be made to 0784 041804(Names: Ben Wokorach) including full name of Participant. You will be contacted to receive your proof of payment receipt.</p>
+									<p class='extra-msg-copy'>Payment to be made to 0784 041804(Names: Ben Wokorach) including full name of Participant. You will be contacted to receive your proof of payment receipt.</p>
 								{% else %}
 									<label>
 										{{ radio.tag }} {{ radio.choice_label}} <br>
 										<span class="checkmark"></span>
 									</label> <br>
-									<p>Payment to be made at the venue reception.</p>
+									<p class='extra-msg-copy'>Payment to be made at the venue reception.</p>
 								{% endif %}
 							{% endfor %}
 						</div>

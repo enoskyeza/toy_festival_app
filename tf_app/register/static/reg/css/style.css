@@ -4,6 +4,23 @@
 @font-face {
   font-family: "Muli-SemiBold";
   src: url("../fonts/muli/Muli-SemiBold.ttf"); }
+
+@font-face {
+  font-family: "bubbleboddy-Regular";
+  src: url("../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/bubbleboddyneue-regular\ trial.woff"); }
+@font-face {
+  font-family: "bubbleboddy-Bold";
+  src: url("../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-Bold\ Trial.woff");}
+@font-face {
+  font-family: "bubbleboddy-Extrabold";
+  src: url("../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-ExtraBold\ Trial.woff");}
+@font-face {
+  font-family: "bubbleboddy-Thin";
+  src: url("../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-Thin\ Trial.woff");}
+
+@import "compass/css3";
+@import url(https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css);
+
 * {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
@@ -12,7 +29,7 @@
 body {
   font-family: "Muli-Regular";
   font-size: 15px;
-  color: #cedbfe;
+  color: #94adf3;
   margin: 0; }
 
 :focus {
@@ -415,3 +432,108 @@ textarea.form-control {
     bottom: 3%; } }
 
 /*# sourceMappingURL=style.css.map */
+
+/* PAYMENT SECTION */
+.extra-msg-copy {
+  font-size: 13px;
+  color: rgba(8, 8, 36, 0.67);
+  text-align: left;
+  margin-top: 10px;
+}
+
+
+
+/* SUCCESS PAGE */
+
+.success-msg {
+  font-family: bubbleboddy-Bold;
+  font-size: 25px;
+  color: green;
+}
+
+.success-msg-copy {
+  /* font-family: bubbleboddy-Thin; */
+  font-size: 15px;
+  color: rgb(8, 8, 36);
+  text-align: left;
+}
+
+.success-msg-tag {
+  /* font-family: bubbleboddy-Thin; */
+  font-size: 13px;
+  color: rgba(8, 8, 36, 0.589);
+}
+
+.share-socials {
+  margin-top: 100px;
+}
+
+.social-share-btns-container {
+  overflow: hidden;
+  margin-top: -20px;
+  text-align: center;
+  width: 100%;
+  z-index: 111;
+}
+
+.social-share-btns {
+  display: inline-block;
+  overflow: hidden;
+  .share-btn {
+    float: left;
+    margin: 2px 2px;
+    padding: 8px 16px;
+    border-radius: 3px;
+    color: #fff;
+    font-size: 14px;
+    line-height: 18px;
+    vertical-align: middle;
+    @include transition(background 0.2s ease-in-out);
+
+    i {
+      margin-right: 5px;
+      display: inline-block;
+      font-size: 18px;
+      vertical-align: middle;
+    }
+  }
+}
+
+/* // Colors */
+.share-btn {
+  background-color: #95a5a6;
+  &:hover {
+    background-color: darken(#95a5a6, 10%);
+  }
+}
+.share-btn-twitter {
+  background-color: #00aced;
+  &:hover {
+    background-color: darken(#00aced, 10%);
+  }
+}
+.share-btn-facebook {
+  background-color: #3b5998;
+  &:hover {
+    background-color: darken(#3b5998, 10%);
+  }
+}
+.share-btn-linkedin {
+  background-color: #007bb6;
+  &:hover {
+    background-color: darken(#007bb6, 10%);
+  }
+}
+.share-btn-reddit {
+  background-color: #ED001C;
+  &:hover {
+    background-color: darken(#ED001C, 10%);
+  }
+}
+
+.share-btn-mail {
+	background-color: #f1c40f;
+	&:hover {
+		background-color: darken(#f1c40f, 5%);
+	}
+}

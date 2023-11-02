@@ -8,19 +8,53 @@
 		<section>
 			<div class="inner">
 				<div class="image-holder">
-					<img src="{% static 'reg/images/form-04.jpg' %}" alt="">
+					<img src="{% static 'reg/images/form-06.jpg' %}" alt="">
 				</div>
 				<div class="form-content" >
-					<div class="form-header">
-						<h3>TADAAM!!</h3>
+					<div class="form-header" style="margin-bottom:40px;">
+						<img class="" src="{% static 'reg/assets/img/logo.png' %}" alt="Imperial">
 					</div>
-					<p>Successfully Registered for the Contest!</p>
-					<p>You have successfully registered for the Toy Making & Innovation Festival 2023!!!
+					<p class='success-msg'>Successfully Registered!!</p>
+					<p class='success-msg-copy'>You have successfully registered for the Toy Making & Innovation Festival 2023!!!
 						You will receive details of the event one week prior to the event date.</p>
-					<p>Don't forget to share</p>
+
+					<div class='share-socials' >
+						<p class='success-msg-tag'>Don't forget to share</p>
+						<div class="social-share-btns-container">
+							<div class="social-share-btns">
+							  <a class="share-btn share-btn-twitter" href="https://twitter.com/intent/tweet?text=https://bit.ly/toy-festival-app" rel="nofollow" target="_blank">
+								<i class="ion-social-twitter"></i>
+								Tweet
+							  </a>
+							  <a class="share-btn share-btn-facebook" href="https://www.facebook.com/sharer/sharer.php?u=https://bit.ly/toy-festival-app" rel="nofollow" target="_blank">
+								<i class="ion-social-facebook"></i>
+								Share
+							  </a>
+							  <a class="share-btn share-btn-linkedin" href="https://www.linkedin.com/cws/share?url=https://bit.ly/toy-festival-app" rel="nofollow" target="_blank">
+								<i class="ion-social-linkedin"></i>
+								Share
+							  </a>
+							  <a class="share-btn share-btn-reddit" href="http://www.reddit.com/submit?url=https://bit.ly/toy-festival-app&title=Wokober+Toy+Festival" rel="nofollow" target="_blank">
+								<i class="ion-social-reddit"></i>
+								Share
+							  </a>
+							  <a class="share-btn share-btn-mail" href="mailto:?subject=Look Fun Codepen Account&amp;body=https://bit.ly/toy-festival-app" rel="nofollow" target="_blank" title="via email">
+								<i class="ion-paper-airplane"></i>
+								Share
+							  </a>
+							</div>
+						  </div>
+					</div>
 				</div>
 			</div>
 		</section>
 	</div>
+
+	<script>
+		// Redirect users to another page when they go back
+		window.onpopstate = function () {
+			window.location.href = '/';
+		};
+	</script>
 
 {% endblock %}

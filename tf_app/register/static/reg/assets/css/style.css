@@ -9,6 +9,26 @@
 /*--------------------------------------------------------------
 # General
 --------------------------------------------------------------*/
+@font-face {
+  font-family: "Muli-Regular";
+  src: url("../../fonts/muli/Muli-Regular.ttf"); }
+@font-face {
+  font-family: "Muli-SemiBold";
+  src: url("../../fonts/muli/Muli-SemiBold.ttf"); }
+
+@font-face {
+  font-family: "Bubbleboddy-Regular";
+  src: url("../../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/bubbleboddyneue-regular\ trial.woff"); }
+@font-face {
+  font-family: "Bubbleboddy-Bold";
+  src: url("../../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-Bold\ Trial.woff");}
+@font-face {
+  font-family: "Bubbleboddy-Extrabold";
+  src: url("../../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-ExtraBold\ Trial.woff");}
+@font-face {
+  font-family: "bubbleboddy-Thin";
+  src: url("../../fonts/bubbleboddy-neue-trial-cufonfonts-webfont/BubbleboddyNeue-Thin\ Trial.woff");}
+
 body {
   background: #fff;
   color: #666666;
@@ -126,9 +146,10 @@ h6 {
 }
 
 #hero h1 {
-  margin: 30px 0 10px 0;
+  font-family: Bubbleboddy-Bold;
+  margin: 30px 0 30px 0px;
   font-weight: 700;
-  line-height: 48px;
+  line-height: 55px;
   text-transform: uppercase;
   color: #fff;
 }
@@ -1064,3 +1085,4 @@ section {
   font-size: 13px;
   color: #ccc;
 }
+
