@@ -1,0 +1,187 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Toy Festival 2023 Registration</title>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<meta name="author" content="colorlib.com">
+
+		<!-- MATERIAL DESIGN ICONIC FONT -->
+		<link rel="stylesheet" href="{% static 'reg/fonts/material-design-iconic-font/css/material-design-iconic-font.css' %}">
+
+		<!-- STYLE CSS -->
+		<link rel="stylesheet" href="{% static 'reg/css/style.css' %}">
+	</head>
+	<body>
+		<div class="wrapper">
+			{% block content %}
+			{% endblock %}
+		</div>
+
+
+
+		<!-- JQUERY -->
+		<script src="{% static 'reg/js/jquery-3.3.1.min.js' %}"></script>
+
+		<!-- JQUERY STEP -->
+		<script src="{% static 'reg/js/jquery.steps.js' %}"></script>
+		<script src="{% static 'reg/js/main.js' %}"></script>
+		<!-- Template created and distributed by Colorlib -->
+</body>
+</html>
+
+{% comment %}
+	<div class="form-row">
+		<div class="select">
+			<div class="form-holder">
+				<div class="select-control">Your country</div>
+				<i class="zmdi zmdi-caret-down"></i>
+			</div>
+			<ul class="dropdown">
+				<li rel="United States">United States</li>
+				<li rel="United Kingdom">United Kingdom</li>
+				<li rel="Viet Nam">Viet Nam</li>
+			</ul>
+		</div>
+		<div class="form-holder"></div>
+	</div>
+{% endcomment %}
+
+
+
+{% comment %}
+	<div class="form-row">
+		<div class="form-holder w-100">
+			<textarea name="" id="" placeholder="Your messagere here!" class="form-control" style="height: 99px;"></textarea>
+		</div>
+	</div>
+{% endcomment %}
+
+{% comment %}
+	<form method="POST" action="" id="wizard">
+				{% csrf_token %}
+        		<!-- SECTION 1 -->
+                <h2></h2>
+                <section>
+                    <div class="inner">
+						<div class="image-holder">
+							<img src="{% static 'reg/images/form-04.jpg' %}" alt="">
+						</div>
+						<div class="form-content" >
+							<div class="form-header">
+								<h3>Registration</h3>
+							</div>
+							<p>Please fill with your details</p>
+							<div class="form-row">
+								<div class="form-holder">
+									<input type="text" placeholder="First Name" class="form-control">
+								</div>
+								<div class="form-holder">
+									<input type="text" placeholder="Last Name" class="form-control">
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-holder">
+									<input type="text" placeholder="Proffession" class="form-control">
+								</div>
+								<div class="form-holder">
+									<input type="text" placeholder="Address" class="form-control">
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-holder">
+									<input type="text" placeholder="Your Email" class="form-control">
+								</div>
+								<div class="form-holder">
+									<input type="text" placeholder="Phone Number" class="form-control">
+								</div>
+							</div>
+
+
+							<div class="form-row">
+								<div class="form-holder">
+									<input type="text" placeholder="Age" class="form-control">
+								</div>
+								<div class="form-holder" style="align-self: flex-end; transform: translateY(4px);">
+									<div class="checkbox-tick">
+										<label class="male">
+											<input type="radio" name="gender" value="male" checked> Male<br>
+											<span class="checkmark"></span>
+										</label>
+										<label class="female">
+											<input type="radio" name="gender" value="female"> Female<br>
+											<span class="checkmark"></span>
+										</label>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+                </section>
+
+				<!-- SECTION 2 -->
+                <h2></h2>
+                <section>
+                    <div class="inner">
+						<div class="image-holder">
+							<img src="{% static 'reg/images/form-05.jpg' %}" alt="">
+						</div>
+						<div class="form-content">
+							<div class="form-header">
+								<h3>Registration</h3>
+							</div>
+							<p>Please fill with additional info</p>
+							<div class="form-row">
+								<div class="form-holder w-100">
+									<input type="text" placeholder="Address" class="form-control">
+								</div>
+							</div>
+							<div class="form-row">
+								<div class="form-holder">
+									<input type="text" placeholder="City" class="form-control">
+								</div>
+								<div class="form-holder">
+									<input type="text" placeholder="School" class="form-control">
+								</div>
+							</div>
+						</div>
+					</div>
+                </section>
+
+                <!-- SECTION 3 -->
+                <h2></h2>
+                <section>
+                    <div class="inner">
+						<div class="image-holder">
+							<img src="{% static 'reg/images/form-06.jpg' %}" alt="">
+						</div>
+						<div class="form-content">
+							<div class="form-header">
+								<h3>Registration</h3>
+							</div>
+							<p>Method of Payment</p>
+							<div class="checkbox-circle mt-24">
+								<label>
+									<input type="radio" checked>  Mobile Money <a href="#">Payment to be made to 0784 041804(Names: Ben Wokorach) including full name of Participant. You will be contacted to receive your proof of payment receipt.</a>
+									<span class="checkmark"></span>
+								</label>
+							</div>
+                            <div class="checkbox-circle mt-24">
+								<label>
+									<input type="radio">  Cash Paymment <a href="#">Payment to be made at the venue reception.</a>
+									<span class="checkmark"></span>
+								</label>
+							</div>
+
+							<div class="checkbox-circle">
+								<label>
+									<input type="checkbox" checked> I confirm that all information provided is correct to the best of my knowledge.
+									<span class="checkmark"></span>
+								</label>
+							</div>
+						</div>
+					</div>
+                </section>
+            </form>
+{% endcomment %}
