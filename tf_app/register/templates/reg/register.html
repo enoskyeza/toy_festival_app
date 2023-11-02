@@ -18,39 +18,30 @@
 						<h3>Parent Section</h3>
 					</div>
 					<p>Please fill with parent's details</p>
-					{% comment %} <div class="form-row">
+					<div class="form-row">
 						<div class="form-holder">
-							<input type="text" name="first_name" value="{{combined_form.parent.first_name.value}}" placeholder="First Name" class="form-control">
+							{{form.parent_first_name}}
 						</div>
 						<div class="form-holder">
-							<input type="text" name="last_name" value="{{combined_form.parent.last_name.value}}" placeholder="Last Name" class="form-control">
+							{{form.parent_last_name}}
 						</div>
 					</div>
 					<div class="form-row">
 						<div class="form-holder">
-							<input type="text" name="proffession" value="{{combined_form.parent.proffession.value}}" placeholder="Proffession" class="form-control">
+							{{form.parent_email}}
 						</div>
 						<div class="form-holder">
-							<input type="text" name="address" value="{{combined_form.parent.address.value}}" placeholder="Address" class="form-control">
+							{{form.parent_phone_number}}
 						</div>
 					</div>
 					<div class="form-row">
 						<div class="form-holder">
-							<input type="text" name="email" value="{{combined_form.parent.email.value}}" placeholder="Email" class="form-control">
+							{{form.parent_proffession}}
 						</div>
 						<div class="form-holder">
-							<input type="text" name="phone_number" value="{{combined_form.parent.email.value}}" placeholder="Phone Number" class="form-control">
+							{{form.parent_address}}
 						</div>
-					</div> {% endcomment %}
-
-					{% comment %} {{ combined_form.parent.first_name }}
-					{{ combined_form.parent.last_name }}
-					{{ combined_form.parent.proffession }}
-					{{ combined_form.parent.address }}
-					{{ combined_form.parent.email }}
-					{{ combined_form.parent.phone_number }} {% endcomment %}
-
-					{{ form }}
+					</div>
 				</div>
 			</div>
 		</section>
@@ -64,14 +55,40 @@
 				</div>
 				<div class="form-content">
 					<div class="form-header">
-						<h3>Particitpant's Section</h3>
+						<h3>Particitpant</h3>
 					</div>
 					<p>Please fill with Particitpant's info</p>
-					{% comment %} {{ combined_form.child.first_name }}
-					{{ combined_form.child.last_name }}
-					{{ combined_form.child.age }}
-					{{ combined_form.child.gender }}
-					{{ combined_form.child.school }} {% endcomment %}
+					<div class="form-row">
+						<div class="form-holder">
+							{{form.child_first_name}}
+						</div>
+						<div class="form-holder">
+							{{form.child_last_name}}
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-holder">
+							{{form.child_age}}
+						</div>
+						<div class="form-holder" style="align-self: flex-end; transform: translateY(4px);">
+							<div class="checkbox-tick">
+								{% for radio in form.child_gender %}
+									<label class="{{ radio.choice_value|lower }}">
+										{{ radio.tag }} {{ radio.choice_label}}<br>
+										<span class="checkmark"></span>
+									</label>
+								{% endfor %}
+							</div>
+						</div>
+					</div>
+					<div class="form-row">
+						<div class="form-holder">
+							{{form.child_school}}
+						</div>
+						<div class="form-holder">
+							{{form.child_email}}
+						</div>
+					</div>
 
 				</div>
 			</div>
@@ -88,10 +105,27 @@
 					<div class="form-header">
 						<h3>Payment Section</h3>
 					</div>
-					<p>Method of Payment</p>
+					<p>Choose method of payment</p>
 
-					{% comment %} {{ combined_form.payment.pay_type }}
-					{{ combined_form.payment.pay_status }} {% endcomment %}
+					<div class="form-holder">
+						<div class="checkbox-tick">
+							{% for radio in form.pay_type %}
+								{% if radio.choice_label == "MOBILE MONEY" %}
+									<label>
+										{{ radio.tag }} {{ radio.choice_label}} <br>
+										<span class="checkmark"></span>
+									</label> <br>
+									<p>Payment to be made to 0784 041804(Names: Ben Wokorach) including full name of Participant. You will be contacted to receive your proof of payment receipt.</p>
+								{% else %}
+									<label>
+										{{ radio.tag }} {{ radio.choice_label}} <br>
+										<span class="checkmark"></span>
+									</label> <br>
+									<p>Payment to be made at the venue reception.</p>
+								{% endif %}
+							{% endfor %}
+						</div>
+					</div>
 
 				</div>
 			</div>
@@ -100,3 +134,17 @@
 	</form>
 
 {% endblock %}
+
+
+<div class="checkbox-circle mt-24">
+	<label>
+		<input type="radio" checked>  Mobile Money <a href="#">Payment to be made to 0784 041804(Names: Ben Wokorach) including full name of Participant. You will be contacted to receive your proof of payment receipt.</a>
+		<span class="checkmark"></span>
+	</label>
+</div>
+<div class="checkbox-circle mt-24">
+	<label>
+		<input type="radio">  Cash Paymment <a href="#">Payment to be made at the venue reception.</a>
+		<span class="checkmark"></span>
+	</label>
+</div>

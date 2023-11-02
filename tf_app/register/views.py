@@ -22,7 +22,7 @@ def success_page(request):
 #     success_url = reverse_lazy('register:success-page')
 
 class RegistrationView(View):
-    template_name = 'register.html'
+    template_name = 'reg/register.html'
 
     def get(self, request):
         #Rendering the initial form with the 3 sections
@@ -62,7 +62,7 @@ class RegistrationView(View):
             )
 
             #Redirect to the success page if all successful
-            return redirect('success-page')
+            return redirect('register:success-page')
 
         #If form is not valid, re-render the form with errors
         return render(request, self.template_name, {form: form})
