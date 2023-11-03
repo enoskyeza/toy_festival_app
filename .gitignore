@@ -1,5 +1,8 @@
 # Created by https://www.gitignore.io
 
+# Custom ingored files
+tf_app/static
+
 ### OSX ###
 .DS_Store
 .AppleDouble
