@@ -16,6 +16,13 @@ $(function(){
 		$(this).parent().prevAll().addClass('checked');
 		$(this).parent().nextAll().removeClass('checked');
     });
+
+    // Custom script to link JS-Submit to Custom Submit
+    $('#wizard a[href="#finish"]').click(function() {
+        console.log("Submit button is clicked");
+        $('#custom-submit').click();
+    });
+
     // Custome Jquery Step Button
     $('.forward').click(function(){
     	$("#wizard").steps('next');
@@ -25,14 +32,14 @@ $(function(){
     })
     // Select Dropdown
     $('html').click(function() {
-        $('.select .dropdown').hide(); 
+        $('.select .dropdown').hide();
     });
     $('.select').click(function(event){
         event.stopPropagation();
     });
     $('.select .select-control').click(function(){
         $(this).parent().next().toggle();
-    })    
+    })
     $('.select .dropdown li').click(function(){
         $(this).parent().toggle();
         var text = $(this).attr('rel');
