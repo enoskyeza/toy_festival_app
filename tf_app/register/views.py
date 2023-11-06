@@ -52,7 +52,7 @@ class RegistrationView(View):
             # Create a new payment object
             payment = Payment.objects.create(
                 pay_type=form.cleaned_data['pay_type'],
-                pay_status=form.cleaned_data['payment_status']
+                pay_status='not_paid'
             )
 
             # Create a new child object

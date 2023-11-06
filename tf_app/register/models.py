@@ -18,6 +18,9 @@ class Payment(models.Model):
     pay_type = models.CharField(max_length=15, choices=PaymentType.choices)
     pay_status = models.CharField(max_length=15, choices=PaymentStatus.choices)
 
+    def __str__(self):
+        return f'{self.pay_type} - {self.pay_status}'
+
 
 class Child(models.Model):
 
