@@ -536,3 +536,10 @@ textarea.form-control {
 		background-color: darken(#f1c40f, 5%);
 	}
 }
+
+#participant-name {
+  color: orangered;
+  font-weight: bolder;
+  /* font-style: italic; */
+  text-transform: uppercase;
+}

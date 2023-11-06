@@ -11,8 +11,14 @@ from .forms import RegistrationForm, ParentForm, ChildForm, PaymentForm
 def home(request):
     return render(request, 'reg/home.html')
 
-def success_page(request):
-    return render(request, 'reg/success.html')
+def success_page(request, child_id):
+    child = Child.objects.get(pk=child_id)
+
+    context = {
+        'child': child,
+    }
+
+    return render(request, 'reg/success.html', context)
 
 
 # class ParentCreateView(CreateView):
@@ -62,7 +68,7 @@ class RegistrationView(View):
             )
 
             #Redirect to the success page if all successful
-            return redirect('register:success-page')
+            return redirect('register:success-page', child_id=child.id)
 
         #If form is not valid, re-render the form with errors
         return render(request, self.template_name, {form: form})

@@ -1,4 +1,6 @@
 from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
 
@@ -36,11 +38,14 @@ class Child(models.Model):
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
 
-    def save(self, *args, **kwargs):
-        if not self.identifier:
-            # Using object ID as the basis for the identifier
-            self.identifier = f'TF23{self.id:03d}'
-        super().save(*args, **kwargs)
+
+@receiver(post_save, sender=Child)
+def generate_child_identifier(sender, instance, created, **kwargs):
+    if created:
+        # Only generate the identifier if the object is being created (not updated)
+        instance.identifier = f'TF23{instance.id:03d}'
+        Child.objects.filter(pk=instance.pk).update(identifier=instance.identifier)
+
 
 
 class Parent(models.Model):
