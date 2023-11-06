@@ -23,7 +23,7 @@ class Child(models.Model):
         MALE = 'M', _('Male')
         FEMALE = 'F', _('Female')
 
-
+    identifier = models.CharField(max_length=15, unique=True, blank=True, null=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(max_length=254, blank='True')
@@ -35,6 +35,12 @@ class Child(models.Model):
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
+
+    def save(self, *args, **kwargs):
+        if not self.identifier:
+            # Using object ID as the basis for the identifier
+            self.identifier = f'TF23{self.id:03d}'
+        super().save(*args, **kwargs)
 
 
 class Parent(models.Model):
