@@ -47,7 +47,7 @@ class RegistrationForm(forms.Form):
     # Include all fields from ParentForm
     parent_first_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'First Name'}))
     parent_last_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Last Name'}))
-    parent_proffession = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Proffession'}))
+    parent_proffession = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Proffession'}), required=False)
     parent_address = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Address'}))
     parent_email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Email'}), required=False)
     parent_phone_number = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Phone Number'}))
