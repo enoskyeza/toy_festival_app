@@ -58,7 +58,7 @@ class RegistrationForm(forms.Form):
     child_email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Email'}), required=False)
     child_age = forms.IntegerField(widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder':'Age'}))
     child_gender = forms.ChoiceField(choices=Child.ChildGender.choices, widget=RadioSelect,)
-    child_school = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'School'}))
+    child_school = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'School'}), required=False)
 
     # Include the pay_type field from PaymentForm
     pay_type = forms.ChoiceField(choices=Payment.PaymentType.choices, widget=RadioSelect,)
