@@ -8,7 +8,7 @@ from django.core.validators import EmailValidator, MinLengthValidator
 
 class Payment(models.Model):
     class PaymentType(models.TextChoices):
-        obile_money = "mm", ("MOBILE MONEY")
+        mobile_money = "Mobile Money", ("MOBILE MONEY")
         cash = 'cash', ("CASH")
 
     class PaymentStatus(models.TextChoices):

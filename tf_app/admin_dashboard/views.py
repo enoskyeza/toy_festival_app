@@ -1,6 +1,10 @@
 from django.shortcuts import render
 
+from register.models import Child
+
 # Create your views here.
+
 def index(request):
-    return render(request, "admin_dashboard/dashboard.html")
+    students = Child.objects.all()
+    return render(request, "admin_dashboard/dashboard.html", context={'students': students})
 
