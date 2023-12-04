@@ -1,0 +1,8 @@
+<!-- scores/contestant_details.html -->
+<h2>Contestant Details - {{ contestant.name }}</h2>
+<!-- Display contestant details and scores -->
+<ul>
+    {% for score in scores %}
+    <li>{{ score.criteria.name }}: {{ score.score }}</li>
+    {% endfor %}
+</ul>

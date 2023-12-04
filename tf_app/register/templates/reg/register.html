@@ -60,19 +60,19 @@
 					<p>Please fill with Particitpant's info</p>
 					<div class="form-row">
 						<div class="form-holder">
-							{{form.child_first_name}}
+							{{form.contestant_first_name}}
 						</div>
 						<div class="form-holder">
-							{{form.child_last_name}}
+							{{form.contestant_last_name}}
 						</div>
 					</div>
 					<div class="form-row">
 						<div class="form-holder">
-							{{form.child_age}}
+							{{form.contestant_age}}
 						</div>
 						<div class="form-holder" style="align-self: flex-end; transform: translateY(4px);">
 							<div class="checkbox-tick">
-								{% for radio in form.child_gender %}
+								{% for radio in form.contestant_gender %}
 									<label class="{{ radio.choice_value|lower }}">
 										{{ radio.tag }} {{ radio.choice_label}}<br>
 										<span class="checkmark"></span>
@@ -83,10 +83,10 @@
 					</div>
 					<div class="form-row">
 						<div class="form-holder">
-							{{form.child_school}}
+							{{form.contestant_school}}
 						</div>
 						<div class="form-holder">
-							{{form.child_email}}
+							{{form.contestant_email}}
 						</div>
 					</div>
 

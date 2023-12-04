@@ -22,9 +22,9 @@ class Payment(models.Model):
         return f'{self.pay_type} - {self.pay_status}'
 
 
-class Child(models.Model):
+class Contestant(models.Model):
 
-    class ChildGender(models.TextChoices):
+    class ContestantGender(models.TextChoices):
         MALE = 'M', _('Male')
         FEMALE = 'F', _('Female')
 
@@ -33,7 +33,7 @@ class Child(models.Model):
     last_name = models.CharField(max_length=100)
     email = models.EmailField(max_length=254, blank='True')
     age = models.IntegerField()
-    gender = models.CharField(max_length=1, choices=ChildGender.choices)
+    gender = models.CharField(max_length=1, choices=ContestantGender.choices)
     school = models.CharField(max_length=100)
     payment_status = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
     parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=True, null=True)
@@ -42,12 +42,12 @@ class Child(models.Model):
         return f'{self.first_name} {self.last_name}'
 
 
-@receiver(post_save, sender=Child)
-def generate_child_identifier(sender, instance, created, **kwargs):
+@receiver(post_save, sender=Contestant)
+def generate_contestant_identifier(sender, instance, created, **kwargs):
     if created:
         # Only generate the identifier if the object is being created (not updated)
         instance.identifier = f'TF23{instance.id:03d}'
-        Child.objects.filter(pk=instance.pk).update(identifier=instance.identifier)
+        Contestant.objects.filter(pk=instance.pk).update(identifier=instance.identifier)
 
 
 

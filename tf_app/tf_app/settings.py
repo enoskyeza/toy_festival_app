@@ -40,7 +40,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'register.apps.RegisterConfig',
-    'admin_dashboard.apps.AdminDashboardConfig'
+    'admin_dashboard.apps.AdminDashboardConfig',
+    'scores.apps.ScoresConfig',
 ]
 
 MIDDLEWARE = [
