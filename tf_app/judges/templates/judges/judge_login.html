@@ -1,14 +1,14 @@
 {% extends 'admin_dashboard/base_login.html' %}
 
 {% block page_title %}
-    <title>Admin Login</title>
+    <title>Judge Login</title>
 {% endblock %}
 
 {% block form_content %}
-                <h3 class="card-title text-left mb-4 text-danger">Admin Login</h3>
+                <h3 class="card-title text-left mb-3">Login</h3>
                 <form>
                   <div class="form-group">
-                    <label>Username or email *</label>
+                    <label>Username *</label>
                     <input type="text" class="form-control p_input">
                   </div>
                   <div class="form-group">
@@ -25,12 +25,6 @@
                   <div class="text-center">
                     <button type="submit" class="btn btn-primary btn-block enter-btn">Login</button>
                   </div>
-                  <div class="d-flex">
-                    <button class="btn btn-facebook mr-2 col pt-2 pb-2">
-                       Judge </button>
-                    <button class="btn btn-google col pt-2 pb-2">
-                       Admin </button>
-                  </div>
-                  <p class="sign-up">Don't have an Account?<a href="#"> Sign Up</a></p>
+                  <p class="sign-up">Don't have an Account? <a href="#"> Contact Admin</a></p>
                 </form>
 {% endblock %}
