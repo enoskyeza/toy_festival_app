@@ -2,7 +2,7 @@ from django.contrib import admin
 from .models import Payment, Parent, Contestant
 
 
-# Individual Register nnormal.
+# Individual Register normal.
 
 # admin.site.register(Parent)
 # admin.site.register(Payment)
