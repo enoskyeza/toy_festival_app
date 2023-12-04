@@ -3,19 +3,19 @@ from django.urls import reverse_lazy
 from django.views import View
 from django.views.generic.edit import CreateView, UpdateView
 
-from .models import Parent, Child, Payment
-from .forms import RegistrationForm, ParentForm, ChildForm, PaymentForm
+from .models import Parent, Contestant, Payment
+from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
 
 # Create your views here.
 
 def home(request):
     return render(request, 'reg/home.html')
 
-def success_page(request, child_id):
-    child = Child.objects.get(pk=child_id)
+def success_page(request, contestant_id):
+    contestant = Contestant.objects.get(pk=contestant_id)
 
     context = {
-        'child': child,
+        'contestant': contestant,
     }
 
     return render(request, 'reg/success.html', context)
@@ -55,20 +55,20 @@ class RegistrationView(View):
                 pay_status='NOT_PAID'
             )
 
-            # Create a new child object
-            child = Child.objects.create(
-                first_name=form.cleaned_data['child_first_name'],
-                last_name=form.cleaned_data['child_last_name'],
-                email=form.cleaned_data['child_email'],
-                age=form.cleaned_data['child_age'],
-                gender=form.cleaned_data['child_gender'],
-                school=form.cleaned_data['child_school'],
+            # Create a new contestant object
+            contestant = Contestant.objects.create(
+                first_name=form.cleaned_data['contestant_first_name'],
+                last_name=form.cleaned_data['contestant_last_name'],
+                email=form.cleaned_data['contestant_email'],
+                age=form.cleaned_data['contestant_age'],
+                gender=form.cleaned_data['contestant_gender'],
+                school=form.cleaned_data['contestant_school'],
                 parent=parent,
                 payment_status=payment
             )
 
             #Redirect to the success page if all successful
-            return redirect('register:success-page', child_id=child.id)
+            return redirect('register:success-page', contestant_id=contestant.id)
 
         #If form is not valid, re-render the form with errors
         return render(request, self.template_name, {form: form})

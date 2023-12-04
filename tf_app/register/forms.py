@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Parent, Child, Payment
+from .models import Parent, Contestant, Payment
 
 
 class ParentForm(forms.ModelForm):
@@ -8,9 +8,9 @@ class ParentForm(forms.ModelForm):
         model = Parent
         fields = ['first_name', 'last_name', 'proffession', 'address', 'email', 'phone_number']
 
-class ChildForm(forms.ModelForm):
+class ContestantForm(forms.ModelForm):
     class Meta:
-        model = Child
+        model = Contestant
         fields = ['first_name', 'last_name', 'email', 'age', 'gender', 'school']
 
 
@@ -24,7 +24,7 @@ class PaymentForm(forms.ModelForm):
 
 class RegForm(forms.Form):
     parent = ParentForm()
-    child = ChildForm()
+    contestant = ContestantForm()
     payment = PaymentForm()
 
 # Combined Form for all the three models
@@ -52,13 +52,13 @@ class RegistrationForm(forms.Form):
     parent_email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Email'}), required=False)
     parent_phone_number = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Phone Number'}))
 
-    # Include all fields from ChildForm
-    child_first_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'First Name'}))
-    child_last_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Last Name'}))
-    child_email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Email'}), required=False)
-    child_age = forms.IntegerField(widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder':'Age'}))
-    child_gender = forms.ChoiceField(choices=Child.ChildGender.choices, widget=RadioSelect,)
-    child_school = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'School'}), required=False)
+    # Include all fields from ContestantForm
+    contestant_first_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'First Name'}))
+    contestant_last_name = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Last Name'}))
+    contestant_email = forms.EmailField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'Email'}), required=False)
+    contestant_age = forms.IntegerField(widget=forms.NumberInput(attrs={'class': 'form-control', 'placeholder':'Age'}))
+    contestant_gender = forms.ChoiceField(choices=Contestant.ContestantGender.choices, widget=RadioSelect,)
+    contestant_school = forms.CharField(widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder':'School'}), required=False)
 
     # Include the pay_type field from PaymentForm
     pay_type = forms.ChoiceField(choices=Payment.PaymentType.choices, widget=RadioSelect,)
