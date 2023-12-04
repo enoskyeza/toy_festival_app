@@ -7,7 +7,13 @@ from register.models import Contestant
 
 def submit_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
+
+    # criteria per category
     criteria = JudgingCriteria.objects.all()
+    fun_criteria = JudgingCriteria.objects.filter(category__name='Fun')
+    function_criteria = JudgingCriteria.objects.filter(category__name='Function')
+    engineering_criteria = JudgingCriteria.objects.filter(category__name='Engineering and crafting')
+    creativity_criteria = JudgingCriteria.objects.filter(category__name='Creativity & Innovation')
 
     if request.method == 'POST':
         for criterion in criteria:
@@ -16,9 +22,15 @@ def submit_score(request, contestant_id):
             score.save()
         # Handle score submission
         return render(request, 'scores/submission_successful.html')
-    return render(request, 'scores/submit_score.html', {'contestant': contestant, 'criteria': criteria})
+    return render(request, 'scores/submit_score.html', {
+        'contestant': contestant,
+        'fun_criteria' : fun_criteria,
+        'function_criteria' : function_criteria,
+        'engineering_criteria' : engineering_criteria,
+        'creativity_criteria' : creativity_criteria,
+        })
 
 def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     scores = Score.objects.filter(contestant=contestant)
-    return render(request, 'scores/contestant_details.html', {'contestant': contestant, 'scores': scores})
+    return render(request, 'scores/contestant_score_details.html', {'contestant': contestant, 'scores': scores})

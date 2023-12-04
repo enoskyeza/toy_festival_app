@@ -1,10 +1,34 @@
 <form method='post'>
 {% csrf_token %}
 <h2>Scoring for {{ contestant.first_name }} {{ contestant.last_name }}</h2>
-{% for criterion in criteria %}
-<label>{{ criterion.name }}: </labe>
+
+<h3>Creativity and Innovation</h3>
+{% for criterion in creativity_criteria %}
+    <label>{{ criterion.name }}: </label>
     <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
     <br>
 {% endfor %}
+
+<h3>Engineering and crafting</h3>
+{% for criterion in engineering_criteria %}
+    <label>{{ criterion.name }}: </label>
+    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
+    <br>
+{% endfor %}
+
+<h3>Function</h3>
+{% for criterion in function_criteria %}
+    <label>{{ criterion.name }}: </label>
+    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
+    <br>
+{% endfor %}
+
+<h3>Fun</h3>
+{% for criterion in fun_criteria %}
+    <label>{{ criterion.name }}: </label>
+    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
+    <br>
+{% endfor %}
+<br>
 <button type='submit'>Submit scores</button>
 </form>

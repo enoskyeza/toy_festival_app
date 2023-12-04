@@ -13,7 +13,7 @@ class MainCategory(models.Model):
 class JudgingCriteria(models.Model):
     category = models.ForeignKey(MainCategory, on_delete=models.CASCADE)
     name = models.CharField(max_length=100)
-    description = models.TextField()
+    description = models.TextField(blank=True)
 
     def __str__(self):
         return f'{self.category} - {self.name}'
