@@ -18,7 +18,7 @@ def submit_score(request, contestant_id):
         return render(request, 'scores/submission_successful.html')
     return render(request, 'scores/submit_score.html', {'contestant': contestant, 'criteria': criteria})
 
-def contestant_details(request, contestant_id):
+def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     scores = Score.objects.filter(contestant=contestant)
     return render(request, 'scores/contestant_details.html', {'contestant': contestant, 'scores': scores})
