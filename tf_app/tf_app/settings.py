@@ -42,6 +42,7 @@ INSTALLED_APPS = [
     'register.apps.RegisterConfig',
     'admin_dashboard.apps.AdminDashboardConfig',
     'scores.apps.ScoresConfig',
+    'judges.apps.JudgesConfig',
 ]
 
 MIDDLEWARE = [
