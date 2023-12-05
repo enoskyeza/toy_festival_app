@@ -1,6 +1,7 @@
 from django.db import models
 
 from register.models import Contestant
+from judges.models import Judge
 
 # Create your models here.
 
@@ -19,6 +20,7 @@ class JudgingCriteria(models.Model):
         return f'{self.category} - {self.name}'
 
 class Score(models.Model):
+    judge = models.ForeignKey(Judge, on_delete=models.CASCADE)
     contestant = models.ForeignKey(Contestant, on_delete=models.CASCADE)
     criteria = models.ForeignKey(JudgingCriteria, on_delete=models.CASCADE)
     score = models.DecimalField(max_digits=5, decimal_places=1)

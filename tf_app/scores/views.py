@@ -1,12 +1,16 @@
 from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
 from .models import Score, JudgingCriteria
 
 from register.models import Contestant
+from judges.models import Judge
 
 # Create your views here.
 
+@login_required
 def submit_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
+    judge = Judge.objects.get(user=request.user)
 
     # criteria per category
     criteria = JudgingCriteria.objects.all()
@@ -18,7 +22,7 @@ def submit_score(request, contestant_id):
     if request.method == 'POST':
         for criterion in criteria:
             score_value = request.POST.get(f'criteria_{criterion.id}')
-            score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value)
+            score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value, judge=judge)
             score.save()
         # Handle score submission
         return render(request, 'scores/submission_successful.html')
@@ -30,6 +34,7 @@ def submit_score(request, contestant_id):
         'creativity_criteria' : creativity_criteria,
         })
 
+@login_required
 def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     scores = Score.objects.filter(contestant=contestant)
