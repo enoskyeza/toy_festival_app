@@ -2,6 +2,8 @@
 
 # Custom ingored files
 tf_app/static
+flag-icon-css/
+maps/
 
 ### OSX ###
 .DS_Store
