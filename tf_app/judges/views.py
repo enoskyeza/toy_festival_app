@@ -29,7 +29,7 @@ def judge_page(request):
     judge = Judge.objects.get(user=request.user)
 
 
-    return render(request, 'judge_page.html', {'judge':judge, 'contenstants':contestants} )
+    return render(request, 'judges/judge_page.html', {'judge':judge, 'contestants':contestants} )
 
 
 
@@ -41,11 +41,15 @@ def judge_login(request):
             password = form.cleaned_data['password']
             user = authenticate(username=username, password=password)
 
-            if user is not None and user.is_judge:
-                login(request, user)
-                return redirect('judging_page')
+            if user is not None:
+                judge_profile = Judge.objects.filter(user=user).first()
 
-        # Invalid credentials or user is not a judge, handle accordingly
+                if judge_profile and judge_profile.is_judge:  # Check if the user is a judge
+                    login(request, user)
+                    return redirect('judge:judge-page')
+                login(request, user)
+                return redirect('judge:judge-page')
+
         error_message = 'Invalid login credentials or user in not a judge'
     else:
         form = JudgeLoginForm()  # Create an instance of the form for GET requests

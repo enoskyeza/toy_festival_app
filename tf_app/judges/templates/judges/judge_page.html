@@ -15,7 +15,7 @@
         <tr>
             <td>{{ contestant.first_name }}</td>
             <td>{{ contestant.last_name }}</td>
-            <td><button>Award scores</button></td>
+            <td><a href="{% url 'score:submit-scores' contestant_id=contestant.id %}">Award scores</a></td>
         </tr>
         {% endfor %}
     </tbody>
