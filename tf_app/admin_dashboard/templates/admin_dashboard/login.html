@@ -26,11 +26,11 @@
                     <button type="submit" class="btn btn-primary btn-block enter-btn">Login</button>
                   </div>
                   <div class="d-flex">
-                    <a href={% url 'judge:judge-login' %} class="btn btn-light mr-2 col pt-2 pb-2">
-                       Are you a Judge? Click here to Login </a>
+                    <a href={% url 'judge:judge-login' %} class="btn btn-light text-dark mr-2 col pt-2 pb-2" style="font-weight: bold">
+                      Judge? Click here to Login </a>
                     {% comment %} <a href={% url 'judge:judge_login' %} class="btn btn-google col pt-2 pb-2">
                        Admin </a> {% endcomment %}
                   </div>
-                  <p class="sign-up">Don't have an Account?<a href="#"> Sign Up</a></p>
+                  <p class="sign-up">Don't have an Account?<a href="#"> Contact admin</a></p>
                 </form>
 {% endblock %}

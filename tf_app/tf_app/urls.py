@@ -19,8 +19,8 @@ from admin_dashboard.views import custom_login
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('admin_dashboard.urls')),
-    path('reg/', include('register.urls')),
+    path('dashboard', include('admin_dashboard.urls')),
+    path('', include('register.urls')),
     path('score/', include('scores.urls')),
     path('judge/', include('judges.urls')),
     path('accounts/login/', custom_login, name='custom_login'),
