@@ -12,8 +12,10 @@ def judge_required(view_func):
                 if judge_profile.is_judge:  # Assuming is_judge is a boolean field in your Judge model
                     return view_func(request, *args, **kwargs)
             except Judge.DoesNotExist:
-                pass  # Redirect or handle the case where the user isn't a judge
+                return redirect('admin_dashboard:dashboard')  # Redirect or handle the case where the user isn't a judge
         # If the user is not logged in or not a judge, handle accordingly
-        return redirect('not_judge_error')  # Redirect to an error page or another view
+        return redirect('judge:judge-login')  # Redirect to an error page or another view
 
     return _wrapped_view
+
+
