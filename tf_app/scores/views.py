@@ -4,10 +4,12 @@ from .models import Score, JudgingCriteria
 
 from register.models import Contestant
 from judges.models import Judge
+from utils.decorators import judge_required
 
 # Create your views here.
 
 @login_required
+@judge_required
 def submit_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     judge = Judge.objects.get(user=request.user)
