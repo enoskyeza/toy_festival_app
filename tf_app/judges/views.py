@@ -1,7 +1,6 @@
 from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
-from functools import wraps
 from .forms import JudgeLoginForm
 from .models import Judge
 

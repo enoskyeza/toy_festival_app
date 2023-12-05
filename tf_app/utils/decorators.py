@@ -1,5 +1,7 @@
-# Custom decorator to restrict judge page to judges
+from functools import wraps
 
+
+# Custom decorator to restrict judge page to judges
 def judge_required(view_func):
     @wraps(view_func)
     def _wrapped_view(request, *args, **kwargs):
