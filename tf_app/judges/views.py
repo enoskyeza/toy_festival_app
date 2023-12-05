@@ -2,6 +2,9 @@ from django.contrib.auth import authenticate, login
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 
+from register.models import Contestant
+from .models import Judge
+
 # Create your views here.
 def judge_login(request):
     if request.method == 'POST':
@@ -20,6 +23,10 @@ def judge_login(request):
 
 
 @login_required
-def judging_page(request):
-    # Your judging page logic here
-    return render(request, 'judging_page.html')
+def judge_page(request):
+    contestants = Contestant.objects.all()
+    judge = Judge.objects.get(user=request.user)
+
+
+    return render(request, 'judge_page.html', {'judge':judge, 'contenstants':contestants} )
+

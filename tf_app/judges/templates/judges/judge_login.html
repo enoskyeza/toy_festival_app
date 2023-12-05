@@ -6,7 +6,8 @@
 
 {% block form_content %}
                 <h3 class="card-title text-left mb-3">Login</h3>
-                <form>
+                <form method='post'>
+                  {% csrf_token %}
                   <div class="form-group">
                     <label>Username *</label>
                     <input type="text" class="form-control p_input">
