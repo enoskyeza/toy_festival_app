@@ -1,8 +1,49 @@
-<h2>Welcome {{ judge.name }}
+{% extends "judges/judge_base.html" %}
 
-<h3>Contestants</h3>
+{% load static %}
 
-<table>
+{% block content %}
+    <h2 class="fw-bold">Welcome {{ judge.name }}</h2>
+    <div class="Card-filter">
+        <div class="CardInner">
+            <label>Search for contestant</label>
+            <div class="container">
+                <div class="Icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                        stroke="#657789" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                        class="feather feather-search">
+                        <circle cx="11" cy="11" r="8" />
+                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                    </svg>
+                </div>
+                <div class="InputContainer">
+                    <input placeholder="Search..." />
+                </div>
+            </div>
+            <div class="btn-group">
+                <a href="#" class="btn btn-primary active" aria-current="page">Active link</a>
+                <a href="#" class="btn btn-primary">Link</a>
+                <a href="#" class="btn btn-primary">Link</a>
+            </div>
+        </div>
+    </div>
+    <div class="contestant-section">
+        {% for contestant in contestants %}
+        <div class="contestant-object">
+            <h4>{{ contestant.identifier }}</h4>
+            <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
+            <div class="score-btns">
+                <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success">Add Score</a>
+                <a class="btn btn-warning">Update Score</a>
+                <a class="btn btn-info">Comment</a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+{% endblock %}
+
+
+<!-- <table>
     <thead>
         <tr>
             <th>First Name</th>
@@ -19,4 +60,4 @@
         </tr>
         {% endfor %}
     </tbody>
-</table>
+</table> -->
