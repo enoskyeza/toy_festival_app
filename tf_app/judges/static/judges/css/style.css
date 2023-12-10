@@ -1,15 +1,36 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300&display=swap');
+
+:root {
+  --primary: #1363C6;
+  --secondary: #15ACE1;
+  --light: #F4F7FE;
+  --dark: #2B2A9C;
+  --border-radius: 10px;
+}
+
+body {
+  font-family: 'Montserrat';
+  /* font-size: 22px; */
+}
+
 .sect-pad-bottom {
   margin-bottom: 20px;
 }
 
-.navbar {
+.nav-bar-custom {
   height: 55px;
+  background: var(--dark);
+  color: white;
+  padding-left: 50px;
+  padding-right: 50px;
 }
+
 
 .main{
   height: calc(100vh - 55px);
   overflow: hidden;
-  padding: 50px;
+  padding: 25px 50px 25px 50px;
+  color: var(--dark)
   /* background: black */
 }
 
@@ -20,18 +41,6 @@
 * {
   -webkit-font-smoothing: antialiased;
   /* color: #acbdce; */
-}
-
-:root {
-  --border-radius: 10px;
-}
-
-body, html {
-  /* background: #e2e9f4; */
-  /* display: grid;
-  height: 100%;
-  grid-template: 1fr/100%;
-  place-items: center; */
 }
 
 .Card-filter {
@@ -141,30 +150,38 @@ input {
 
 /* CONTESTANT SECTION */
 
-.contestant-section{
-  overflow: scroll;
-  /* overflow-y: hidden; Hide vertical scrollbar */
-  overflow-x: hidden; /* Hide horizontal scrollbar */
-}
-
 /* width */
 ::-webkit-scrollbar {
-  width: 20px;
+  width: 12px;
 }
 
 /* Track */
 ::-webkit-scrollbar-track {
   box-shadow: inset 0 0 5px grey;
   border-radius: 10px;
+  background: #C3D3F4;
 }
 
 /* Handle */
 ::-webkit-scrollbar-thumb {
-  background: red;
+  background: #2B2A9C;
   border-radius: 10px;
 }
 
 /* Handle on hover */
 ::-webkit-scrollbar-thumb:hover {
-  background: #b30000;
+  background: #22217a;
 }
+
+.contestant-section{
+  overflow: scroll;
+  overflow-x: hidden; /* Hide horizontal scrollbar */
+  /* background: red; */
+  height: 75%;
+}
+
+.contestant-object {
+  padding-block: 20px;
+}
+
+
