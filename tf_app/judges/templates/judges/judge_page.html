@@ -20,12 +20,12 @@
                     <input placeholder="Search..." />
                 </div>
             </div>
-            <div class="btn-group">
-                <a href="#" class="btn btn-primary active" aria-current="page">Active link</a>
-                <a href="#" class="btn btn-primary">Link</a>
-                <a href="#" class="btn btn-primary">Link</a>
-            </div>
         </div>
+    </div>
+    <div class="filter-btn-group">
+        <button class="text-light fw-bold active">All</button>
+        <button class="text-light fw-bold">Age Category</button>
+        <button class="text-light fw-bold">Gender</button>
     </div>
     <div class="contestant-section">
         {% for contestant in contestants %}
@@ -33,9 +33,9 @@
             <h4>{{ contestant.identifier }}</h4>
             <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
             <div class="score-btns">
-                <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success">Add Score</a>
-                <a class="btn btn-warning">Update Score</a>
-                <a class="btn btn-info">Comment</a>
+                <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
+                <a class="btn btn-warning text-light fw-bold">Update Score</a>
+                <!-- <a class="btn btn-info text-light fw-bold">Comment</a> -->
             </div>
         </div>
         {% endfor %}
