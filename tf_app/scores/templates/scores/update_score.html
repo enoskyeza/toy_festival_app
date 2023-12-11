@@ -1,63 +1,40 @@
-{% extends "judges/judge_base.html" %}
+{% extends "scores/scores_base.html" %}
 
 {% load static %}
 
-{% block content %}
-<form method='post'>
-    {% csrf_token %}
-    <div class="bio-container">
-        <div>
-            <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
-            <h4>{{ contestant.identifier }}</h4>
-            {% if contestant.gender == "M" %}
-            <p>Male | {{ contestant.age }}years </p>
-            {% else %}
-            <p>Female | {{ contestant.age }}years </p>
-            {% endif%}
-        </div>
-        <div>
-            <img class="img-custom" src="{% static 'judges/marina.jpg' %}">
-        </div>
-    </div>
+{% block scorecontent %}
+  <form method='post'>
+      {% csrf_token %}
 
-    <div class="accordion" id="accordionExample">
-      {% for category, criteria in filter_by_category.items %}
-        <div class="accordion-item">
-          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
-            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
-                {{ category }}
-            </button>
-          </h2>
-          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionExample">
-            <div class="accordion-body">
-                {% for criterion in criteria.0 %}
-                  {% for score_obj in criteria.1 %}
-                      {% if score_obj.criteria == criterion %}
-                        <div class="score-object">
-                            <label>{{ criterion.name }}: </label>
-                            <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value={{ score_obj.score }}>
-                        </div>
-                      {% endif %}
+      <div class="accordion" id="accordionExample">
+        {% for category, criteria in filter_by_category.items %}
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
+                  {{ category }}
+              </button>
+            </h2>
+            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionExample">
+              <div class="accordion-body">
+                  {% for criterion in criteria.0 %}
+                    {% for score_obj in criteria.1 %}
+                        {% if score_obj.criteria == criterion %}
+                          <div class="score-object">
+                              <label>{{ criterion.name }}: </label>
+                              <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value={{ score_obj.score }}>
+                          </div>
+                        {% endif %}
+                    {% endfor %}
                   {% endfor %}
-                {% endfor %}
+              </div>
             </div>
           </div>
-        </div>
-      {% endfor %}
-    </div>
-    <div class="score-view-btn">
-        <button class='btn btn-success' type='submit' >Save</button>
-        <button class='btn btn-danger'>Reset scores</button>
-    </div>
-</form>
+        {% endfor %}
+      </div>
+      <div class="score-view-btn">
+          <button class='btn btn-success' type='submit' >Save</button>
+          <button class='btn btn-danger'>Reset scores</button>
+      </div>
+
+  </form>
 {% endblock %}
-
-
-<!-- scores/contestant_details.html -->
-<h2>Contestant Details - {{ contestant.name }}</h2>
-<!-- Display contestant details and scores -->
-<ul>
-    {% for score in scores %}
-    <li>{{ score.criteria.name }}: {{ score.score }}</li>
-    {% endfor %}
-</ul>
