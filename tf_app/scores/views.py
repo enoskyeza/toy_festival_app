@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.db.models import Sum
 from .models import Score, JudgingCriteria
 
 from register.models import Contestant
@@ -8,12 +9,30 @@ from utils.decorators import judge_required
 
 # Create your views here.
 
+def calc_score(contestant, judge ):
+    categories = ['Fun', 'Function', 'Engineering and crafting', 'Creativity & Innovation']
+    scores = Score.objects.filter(contestant=contestant, judge=judge)
+    total_score = 0
+    sub_scores = {}
+
+    for category in categories:
+        category_scores = Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category)
+        category_total_score = category_scores.aggregate(total_sum=Sum('score'))['total_sum'] or 0
+        total_score += category_total_score
+        sub_scores[category] = category_total_score
+
+    return {
+        'contestant': contestant,
+        'scores': scores,
+        'total_score': total_score,
+        'sub_scores': sub_scores,
+    }
+
 @login_required
 @judge_required
 def submit_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     judge = Judge.objects.get(user=request.user)
-    scores = Score.objects.filter(contestant=contestant, judge=judge)
 
     # criteria per category
     criteria_by_category = {
@@ -30,8 +49,7 @@ def submit_score(request, contestant_id):
                 score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value, judge=judge)
                 score.save()
         # Handle score submission
-        return render(request, 'scores/judge_scores.html', {'contestant': contestant,
-                                                            'scores': scores})
+        return render(request, 'scores/judge_scores.html', calc_score(contestant, judge))
 
     return render(request, 'scores/submit_score.html', {
         'contestant': contestant,
@@ -44,7 +62,6 @@ def submit_score(request, contestant_id):
 def update_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     judge = Judge.objects.get(user=request.user)
-    scores_set = Score.objects.filter(contestant=contestant, judge=judge)
 
     # Filtering Scores & Criteria by category
     filter_by_category = {
@@ -80,8 +97,7 @@ def update_score(request, contestant_id):
                         object.save()
 
         # Handle score submission
-        return render(request, 'scores/contestant_score_details.html', {'contestant': contestant,
-                                                                        'scores': scores_set})
+        return render(request, 'scores/judge_scores.html', calc_score(contestant, judge))
 
 
     return render(request, 'scores/update_score.html', {
@@ -90,41 +106,9 @@ def update_score(request, contestant_id):
     })
 
 
-
 @login_required
 def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     scores = Score.objects.filter(contestant=contestant)
     return render(request, 'scores/judge_scores.html', {'contestant': contestant, 'scores': scores})
 
-
-
-
-# Refactored code blocks
-
-# Create view for scores
-# def submit_score(request, contestant_id):
-#     contestant = get_object_or_404(Contestant, pk=contestant_id)
-#     judge = Judge.objects.get(user=request.user)
-
-#     # criteria per category
-#     criteria = JudgingCriteria.objects.all()
-#     fun_criteria = JudgingCriteria.objects.filter(category__name='Fun')
-#     function_criteria = JudgingCriteria.objects.filter(category__name='Function')
-#     engineering_criteria = JudgingCriteria.objects.filter(category__name='Engineering and crafting')
-#     creativity_criteria = JudgingCriteria.objects.filter(category__name='Creativity & Innovation')
-
-#     if request.method == 'POST':
-#         for criterion in criteria:
-#             score_value = request.POST.get(f'criteria_{criterion.id}')
-#             score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value, judge=judge)
-#             score.save()
-#         # Handle score submission
-#         return render(request, 'scores/submission_successful.html')
-#     return render(request, 'scores/submit_score.html', {
-#         'contestant': contestant,
-#         'fun_criteria' : fun_criteria,
-#         'function_criteria' : function_criteria,
-#         'engineering_criteria' : engineering_criteria,
-#         'creativity_criteria' : creativity_criteria,
-#         })

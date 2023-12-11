@@ -3,6 +3,35 @@
 {% load static %}
 
 {% block scorecontent %}
+    <div class="scores-container">
+        <div class="fun-scores info-theme">
+            <img src="{% static 'scores/assest/images/icon-01.png' %}" alt="">
+
+        </div>
+        <div class="function-scores dark-theme">
+
+        </div>
+        <div class="creativity-scores dark-theme">
+
+        </div>
+        <div class="crafts-scores info-theme">
+
+        </div>
+    </div>
+
+{% endblock%}
+
+
+
+
+<p>Total score: {{total_score}}</p>
+
+<p>Sub scores: {{sub_scores}}</p>
+
+{% for category, score in sub_scores.items %}
+    <p>{{category}} - {{ score }}</p>
+{% endfor%}
+
 <table>
     <thead>
         <tr>
@@ -19,8 +48,3 @@
         {% endfor %}
     </tbody>
 </table>
-{% endblock%}
-
-
-
-
