@@ -5,14 +5,19 @@
 {% block content %}
 <form method='post'>
     {% csrf_token %}
-    <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
-
-    <div>
+    <div class="bio-container">
         <div>
+            <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
             <h4>{{ contestant.identifier }}</h4>
-            <p>{{ contestant.gender }} | {{ contestant.age }}years </p>
+            {% if contestant.gender == "M" %}
+            <p>Male | {{ contestant.age }}years </p>
+            {% else %}
+            <p>Female | {{ contestant.age }}years </p>
+            {% endif%}
         </div>
-        <img>
+        <div >
+            <img class="img-custom" src="{% static 'judges/marina.jpg' %}">
+        </div>
     </div>
 
     <div class="accordion" id="accordionExample">

@@ -272,6 +272,20 @@ input {
 
 /* SCORES VIEW */
 
+.bio-container {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.img-custom {
+width: 120px;
+height: 120px;
+border-radius: 8px;
+
+}
+
 .score-view-btn {
   margin-top: 20px;
   display: flex;
@@ -283,10 +297,21 @@ input {
   padding: 10px 25px;
 }
 
+.score-object {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-block: 5px;
+  /* background: red; */
+}
+
 .score-object label{
-  width: 50%;
+  width: 70%;
+  font-size: 14px;
 }
 
 .score-object input{
-  width: 50%;
+  width: 20%;
+  padding: 5px 5px 5px 10px;
+
 }
