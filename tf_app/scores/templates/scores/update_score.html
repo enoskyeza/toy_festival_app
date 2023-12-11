@@ -1,0 +1,59 @@
+{% extends "judges/judge_base.html" %}
+
+{% load static %}
+
+{% block content %}
+<form method='post'>
+    {% csrf_token %}
+    <div class="bio-container">
+        <div>
+            <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
+            <h4>{{ contestant.identifier }}</h4>
+            {% if contestant.gender == "M" %}
+            <p>Male | {{ contestant.age }}years </p>
+            {% else %}
+            <p>Female | {{ contestant.age }}years </p>
+            {% endif%}
+        </div>
+        <div>
+            <img class="img-custom" src="{% static 'judges/marina.jpg' %}">
+        </div>
+    </div>
+
+    <div class="accordion" id="accordionExample">
+      {% for caterogy, criteria in criteria_by_category.items %}
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
+                {{ caterogy }}
+            </button>
+          </h2>
+          <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+                {% for criterion in criteria %}
+                <div class="score-object">
+                    <label>{{ criterion.name }}: </label>
+                    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value=0.00>
+                </div>
+                {% endfor %}
+            </div>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="score-view-btn">
+        <button class='btn btn-success' type='submit' >Save</button>
+        <button class='btn btn-danger'>Reset scores</button>
+    </div>
+</form>
+{% endblock %}
+
+
+<!-- scores/contestant_details.html -->
+<h2>Contestant Details - {{ contestant.name }}</h2>
+<!-- Display contestant details and scores -->
+<ul>
+    {% for score in scores %}
+    <li>{{ score.criteria.name }}: {{ score.score }}</li>
+    {% endfor %}
+</ul>
