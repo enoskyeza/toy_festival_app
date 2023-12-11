@@ -13,6 +13,7 @@ from utils.decorators import judge_required
 def submit_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     judge = Judge.objects.get(user=request.user)
+    scores = Score.objects.filter(contestant=contestant, judge=judge)
 
     # criteria per category
     criteria_by_category = {
@@ -29,7 +30,9 @@ def submit_score(request, contestant_id):
                 score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value, judge=judge)
                 score.save()
         # Handle score submission
-        return render(request, 'scores/submission_successful.html')
+        return render(request, 'scores/judge_scores.html', {'contestant': contestant,
+                                                            'scores': scores})
+
     return render(request, 'scores/submit_score.html', {
         'contestant': contestant,
         'criteria_by_category': criteria_by_category,
@@ -41,6 +44,7 @@ def submit_score(request, contestant_id):
 def update_score(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     judge = Judge.objects.get(user=request.user)
+    scores_set = Score.objects.filter(contestant=contestant, judge=judge)
 
     # Filtering Scores & Criteria by category
     filter_by_category = {
@@ -76,7 +80,10 @@ def update_score(request, contestant_id):
                         object.save()
 
         # Handle score submission
-        return render(request, 'scores/submission_successful.html')
+        return render(request, 'scores/contestant_score_details.html', {'contestant': contestant,
+                                                                        'scores': scores_set})
+
+
     return render(request, 'scores/update_score.html', {
         'contestant': contestant,
         'filter_by_category': filter_by_category,
@@ -88,7 +95,7 @@ def update_score(request, contestant_id):
 def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
     scores = Score.objects.filter(contestant=contestant)
-    return render(request, 'scores/contestant_score_details.html', {'contestant': contestant, 'scores': scores})
+    return render(request, 'scores/judge_scores.html', {'contestant': contestant, 'scores': scores})
 
 
 

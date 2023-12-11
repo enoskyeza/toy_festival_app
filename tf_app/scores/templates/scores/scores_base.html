@@ -4,21 +4,22 @@
 
 {% block content %}
 
-<div class="bio-container">
-    <div>
-        <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
-        <h4>{{ contestant.identifier }}</h4>
-        {% if contestant.gender == "M" %}
-        <p>Male | {{ contestant.age }}years </p>
-        {% else %}
-        <p>Female | {{ contestant.age }}years </p>
-        {% endif%}
+    <div class="bio-container">
+        <div>
+            <h2 class="fw-bold">{{ contestant.first_name }} {{ contestant.last_name }}</h2>
+            <h4>{{ contestant.identifier }}</h4>
+            {% if contestant.gender == "M" %}
+            <p>Male | {{ contestant.age }}years </p>
+            {% else %}
+            <p>Female | {{ contestant.age }}years </p>
+            {% endif%}
+        </div>
+        <div>
+            <img class="img-custom" src="{% static 'judges/marina.jpg' %}">
+        </div>
     </div>
-    <div>
-        <img class="img-custom" src="{% static 'judges/marina.jpg' %}">
-    </div>
-</div>
 
     {% block scorecontent %}
     {% endblock%}
+
 {% endblock %}

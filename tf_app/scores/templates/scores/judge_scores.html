@@ -1,0 +1,26 @@
+{% extends "scores/scores_base.html" %}
+
+{% load static %}
+
+{% block scorecontent %}
+<table>
+    <thead>
+        <tr>
+            <th>Criteria</th>
+            <th>Points</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for score in scores %}
+        <tr>
+            <td>{{ score.criteria.name }}</td>
+            <td>{{ score.score }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock%}
+
+
+
+
