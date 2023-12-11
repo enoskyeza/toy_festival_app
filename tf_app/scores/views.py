@@ -35,6 +35,7 @@ def submit_score(request, contestant_id):
         'criteria_by_category': criteria_by_category,
     })
 
+
 @login_required
 @judge_required
 def update_score(request, contestant_id):
@@ -42,8 +43,9 @@ def update_score(request, contestant_id):
     judge = Judge.objects.get(user=request.user)
     # scores = Score.objects.filter(contestant=contestant, judge=judge,)
 
-    # criteria per category
-    criteria_by_category = {
+    # Filtering Scores & Criteria by category
+
+    filter_by_category = {
         'Fun': [
             JudgingCriteria.objects.filter(category__name='Fun'),
             Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name='Fun')
@@ -63,13 +65,19 @@ def update_score(request, contestant_id):
     }
 
     if request.method == 'POST':
-        for category, criteria_list in criteria_by_category.items():
+        for category, criteria_list in filter_by_category.items():
 
             # Filtering scores according to the category
             scores = Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category)
 
-            for criterion in criteria_list:
+            for criterion in criteria_list[0]:
+                print(f'the criteria is {criterion}')
                 for object in scores:
+
+                    print('**********')
+                    print(f'The Score object criteria and value are {object.score} and {object.criteria}')
+                    print('**********')
+
                     if object.criteria == criterion:
                         score_value = request.POST.get(f'criteria_{criterion.id}')
                         object.score = score_value
@@ -79,7 +87,7 @@ def update_score(request, contestant_id):
         return render(request, 'scores/submission_successful.html')
     return render(request, 'scores/update_score.html', {
         'contestant': contestant,
-        'criteria_by_category': criteria_by_category,
+        'filter_by_category': filter_by_category,
     })
 
 
