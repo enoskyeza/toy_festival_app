@@ -1,34 +1,93 @@
-<form method='post'>
-{% csrf_token %}
-<h2>Scoring for {{ contestant.first_name }} {{ contestant.last_name }}</h2>
+{% extends "scores/scores_base.html" %}
 
-<h3>Creativity and Innovation</h3>
-{% for criterion in creativity_criteria %}
-    <label>{{ criterion.name }}: </label>
-    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
-    <br>
-{% endfor %}
+{% load static %}
 
-<h3>Engineering and crafting</h3>
-{% for criterion in engineering_criteria %}
-    <label>{{ criterion.name }}: </label>
-    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
-    <br>
-{% endfor %}
+{% block scorecontent %}
+  <form method='post'>
+      {% csrf_token %}
 
-<h3>Function</h3>
-{% for criterion in function_criteria %}
-    <label>{{ criterion.name }}: </label>
-    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
-    <br>
-{% endfor %}
+      <div class="accordion" id="accordionExample">
+        {% for caterogy, criteria in criteria_by_category.items %}
+          <div class="accordion-item">
+            <h2 class="accordion-header" id="heading{{ forloop.counter }}">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapse{{ forloop.counter }}" aria-expanded="true" aria-controls="collapse{{ forloop.counter }}">
+                  {{ caterogy }}
+              </button>
+            </h2>
+            <div id="collapse{{ forloop.counter }}" class="accordion-collapse collapse" aria-labelledby="heading{{ forloop.counter }}" data-bs-parent="#accordionExample">
+              <div class="accordion-body">
+                  {% for criterion in criteria %}
+                  <div class="score-object">
+                      <label>{{ criterion.name }}: </label>
+                      <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value=0.00>
+                  </div>
+                  {% endfor %}
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+      <div class="score-view-btn">
+          <button class='btn btn-success' type='submit' >Save</button>
+          <button class='btn btn-danger'>Reset scores</button>
+      </div>
 
-<h3>Fun</h3>
-{% for criterion in fun_criteria %}
-    <label>{{ criterion.name }}: </label>
-    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10'>
-    <br>
-{% endfor %}
-<br>
-<button type='submit'>Submit scores</button>
-</form>
+  </form>
+{% endblock %}
+
+
+
+{% comment %}
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingTwo">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                Engineering and crafting
+            </button>
+          </h2>
+          <div id="collapseTwo" class="accordion-collapse collapse" aria-labelledby="headingTwo" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+                {% for criterion in engineering_criteria %}
+                <div class="score-object">
+                    <label>{{ criterion.name }}: </label>
+                    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value=0.00>
+                </div>
+                {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+          <h2 class="accordion-header" id="headingThree">
+            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                Function
+            </button>
+          </h2>
+          <div id="collapseThree" class="accordion-collapse collapse" aria-labelledby="headingThree" data-bs-parent="#accordionExample">
+            <div class="accordion-body">
+                {% for criterion in function_criteria %}
+                <div class="score-object">
+                    <label>{{ criterion.name }}: </label>
+                    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value=0.00>
+                </div>
+                {% endfor %}
+            </div>
+          </div>
+        </div>
+
+        <div class="accordion-item">
+            <h2 class="accordion-header" id="headingFour">
+              <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseFour" aria-expanded="false" aria-controls="collapseFour">
+                Fun
+              </button>
+            </h2>
+            <div id="collapseFour" class="accordion-collapse collapse" aria-labelledby="headingFour" data-bs-parent="#accordionExample">
+              <div class="accordion-body">
+                {% for criterion in fun_criteria %}
+                <div class="score-object">
+                    <label>{{ criterion.name }}: </label>
+                    <input type='number' name='criteria_{{ criterion.id }}' step='0.5' min='0' max='10' value=0.00>
+                </div>
+                {% endfor %}
+              </div>
+            </div>
+        </div> {% endcomment %}

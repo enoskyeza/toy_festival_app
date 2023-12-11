@@ -2,6 +2,8 @@
 
 {% load static %}
 
+{% load custom_filters %}
+
 {% block content %}
     <h2 class="fw-bold">Welcome {{ judge.name }}</h2>
     <div class="Card-filter">
@@ -20,12 +22,12 @@
                     <input placeholder="Search..." />
                 </div>
             </div>
-            <div class="btn-group">
-                <a href="#" class="btn btn-primary active" aria-current="page">Active link</a>
-                <a href="#" class="btn btn-primary">Link</a>
-                <a href="#" class="btn btn-primary">Link</a>
-            </div>
         </div>
+    </div>
+    <div class="filter-btn-group">
+        <button class="fw-bold active">All</button>
+        <button class="fw-bold">Age Category</button>
+        <button class="fw-bold">Gender</button>
     </div>
     <div class="contestant-section">
         {% for contestant in contestants %}
@@ -33,31 +35,15 @@
             <h4>{{ contestant.identifier }}</h4>
             <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
             <div class="score-btns">
-                <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success">Add Score</a>
-                <a class="btn btn-warning">Update Score</a>
-                <a class="btn btn-info">Comment</a>
+                {% if score_by_contestant|get_value:contestant.id %}
+                    <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">Update Score</a>
+                {% else %}
+                    <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
+                {% endif %}
+                <a class="btn btn-info text-light fw-bold">Comment</a>
             </div>
         </div>
         {% endfor %}
     </div>
 {% endblock %}
 
-
-<!-- <table>
-    <thead>
-        <tr>
-            <th>First Name</th>
-            <th>Last Name</th>
-            <th>Action</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for contestant in contestants %}
-        <tr>
-            <td>{{ contestant.first_name }}</td>
-            <td>{{ contestant.last_name }}</td>
-            <td><a href="{% url 'score:submit-scores' contestant_id=contestant.id %}">Award scores</a></td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table> -->

@@ -5,6 +5,7 @@ from .forms import JudgeLoginForm
 from .models import Judge
 
 from register.models import Contestant
+from scores.models import Score
 from utils.decorators import judge_required
 
 
@@ -14,7 +15,17 @@ def judge_page(request):
     contestants = Contestant.objects.all()
     judge = Judge.objects.get(user=request.user)
 
-    return render(request, 'judges/judge_page.html', {'judge':judge, 'contestants':contestants} )
+    # Check if contestant has scores
+    score_by_contestant = {}
+
+    for contestant in contestants:
+        has_score = Score.objects.filter(judge=judge, contestant=contestant).exists()
+        score_by_contestant[contestant.id] = has_score
+
+    print(score_by_contestant)
+    return render(request, 'judges/judge_page.html', {'judge':judge,
+                                                      'contestants':contestants,
+                                                      'score_by_contestant':score_by_contestant,} )
 
 
 
