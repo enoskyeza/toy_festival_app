@@ -2,6 +2,8 @@
 
 {% load static %}
 
+{% load custom_filters %}
+
 {% block content %}
     <h2 class="fw-bold">Welcome {{ judge.name }}</h2>
     <div class="Card-filter">
@@ -33,9 +35,12 @@
             <h4>{{ contestant.identifier }}</h4>
             <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
             <div class="score-btns">
-                <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
-                <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">Update Score</a>
-                <!-- <a class="btn btn-info text-light fw-bold">Comment</a> -->
+                {% if score_by_contestant|get_value:contestant.id %}
+                    <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">Update Score</a>
+                {% else %}
+                    <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
+                {% endif %}
+                <a class="btn btn-info text-light fw-bold">Comment</a>
             </div>
         </div>
         {% endfor %}
