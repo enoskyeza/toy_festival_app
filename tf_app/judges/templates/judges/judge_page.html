@@ -34,7 +34,7 @@
             <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
             <div class="score-btns">
                 <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
-                <a class="btn btn-warning text-light fw-bold">Update Score</a>
+                <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">Update Score</a>
                 <!-- <a class="btn btn-info text-light fw-bold">Comment</a> -->
             </div>
         </div>

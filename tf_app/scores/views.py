@@ -44,10 +44,22 @@ def update_score(request, contestant_id):
 
     # criteria per category
     criteria_by_category = {
-        'Fun': JudgingCriteria.objects.filter(category__name='Fun'),
-        'Function': JudgingCriteria.objects.filter(category__name='Function'),
-        'Engineering and crafting': JudgingCriteria.objects.filter(category__name='Engineering and crafting'),
-        'Creativity & Innovation': JudgingCriteria.objects.filter(category__name='Creativity & Innovation'),
+        'Fun': [
+            JudgingCriteria.objects.filter(category__name='Fun'),
+            Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name='Fun')
+            ],
+        'Function': [
+            JudgingCriteria.objects.filter(category__name='Function'),
+            Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name='Function')
+            ],
+        'Engineering and crafting': [
+            JudgingCriteria.objects.filter(category__name='Engineering and crafting'),
+            Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name='Engineering and crafting')
+            ],
+        'Creativity & Innovation': [
+            JudgingCriteria.objects.filter(category__name='Creativity & Innovation'),
+            Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name='Creativity & Innovation')
+            ]
     }
 
     if request.method == 'POST':
@@ -65,10 +77,9 @@ def update_score(request, contestant_id):
 
         # Handle score submission
         return render(request, 'scores/submission_successful.html')
-    return render(request, 'scores/submit_score.html', {
+    return render(request, 'scores/update_score.html', {
         'contestant': contestant,
         'criteria_by_category': criteria_by_category,
-        'score': scores,
     })
 
 
