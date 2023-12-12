@@ -1,4 +1,4 @@
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from .models import Score, JudgingCriteria
@@ -49,7 +49,7 @@ def submit_score(request, contestant_id):
                 score = Score.objects.create(contestant=contestant, criteria=criterion, score=score_value, judge=judge)
                 score.save()
         # Handle score submission
-        return render(request, 'scores/judge_scores.html', calc_score(contestant, judge))
+        return render (request, 'scores/judge_scores.html', calc_score(contestant, judge))
 
     return render(request, 'scores/submit_score.html', {
         'contestant': contestant,
