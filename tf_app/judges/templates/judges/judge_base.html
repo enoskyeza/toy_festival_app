@@ -22,9 +22,19 @@
     <nav class="navbar navbar-expand-lg navbar-dark nav-bar-custom">
       <div class="container-fluid">
         <a class="navbar-brand text-reset fw-bold fs-6" href=" {% url "judge:judge-page" %}">Judge Dashboard</a>
-        <button class="btn">
-          <span class="navbar-toggler-icon" ></span>
-        </button>
+        <!-- Example single danger button -->
+        <div class="btn-group">
+          <button class="btn" data-bs-toggle="dropdown" aria-expanded="false">
+            <span class="navbar-toggler-icon" ></span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li><a class="dropdown-item" href="#">Settings</a></li>
+            <li><a class="dropdown-item" href="{% url 'logout' %}">Logout</a></li>
+            {% comment %} <li><a class="dropdown-item" href="#">Something else here</a></li>
+            <li><hr class="dropdown-divider"></li>
+            <li><a class="dropdown-item" href="#">Separated link</a></li> {% endcomment %}
+          </ul>
+        </div>
       </div>
     </nav>
     <div class="main">
@@ -37,5 +47,9 @@
       integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM"
       crossorigin="anonymous"
     ></script>
+
+    {% block scripts %}
+    {% endblock %}
+
   </body>
 </html>

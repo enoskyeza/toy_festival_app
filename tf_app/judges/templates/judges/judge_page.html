@@ -18,18 +18,18 @@
                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                     </svg>
                 </div>
-                <div class="InputContainer">
+                <div class="InputContainer" id="search-input">
                     <input placeholder="Search..." />
                 </div>
             </div>
         </div>
     </div>
     <div class="filter-btn-group">
-        <button class="fw-bold active">All</button>
+        <button class="fw-bold active" id='all-btn'>All</button>
         <button class="fw-bold">Age Category</button>
         <button class="fw-bold">Gender</button>
     </div>
-    <div class="contestant-section">
+    <div class="contestant-section" id="contestant-section-id">
         {% for contestant in contestants %}
         <div class="contestant-object">
             <h4>{{ contestant.identifier }}</h4>
@@ -45,5 +45,9 @@
         </div>
         {% endfor %}
     </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'judges/script.js' %}"></script>
 {% endblock %}
 

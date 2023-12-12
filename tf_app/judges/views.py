@@ -22,7 +22,6 @@ def judge_page(request):
         has_score = Score.objects.filter(judge=judge, contestant=contestant).exists()
         score_by_contestant[contestant.id] = has_score
 
-    print(score_by_contestant)
     return render(request, 'judges/judge_page.html', {'judge':judge,
                                                       'contestants':contestants,
                                                       'score_by_contestant':score_by_contestant,} )
