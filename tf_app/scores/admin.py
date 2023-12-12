@@ -14,4 +14,10 @@ class MainCategoryAdmin(admin.ModelAdmin):
 
 admin.site.register(MainCategory, MainCategoryAdmin)
 admin.site.register(JudgingCriteria)
-admin.site.register(Score)
+
+@admin.register(Score)
+class ScoreAdmin(admin.ModelAdmin):
+    list_display = ('judge', 'contestant', 'criteria', 'score' )
+    list_filter = ('judge', 'contestant', 'criteria')
+    search_fields = ('judge', 'contestant', 'criteria')
+    # Other customizations can be added here

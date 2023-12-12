@@ -1,0 +1,68 @@
+{% extends "scores/scores_base.html" %}
+
+{% load static %}
+
+{% load scores_custom_filters %}
+
+{% block scorecontent %}
+    <div class="scores-details-container">
+        <div class="fun-scores score-card score-info-theme">
+            <img src="{% static 'scores/assets/images/icon-01.png' %}" alt="">
+            <h4>fun</h4>
+            <h2>{{ sub_scores|get_value:'Fun' }}<span>/50</span></h2>
+        </div>
+        <div class="function-scores score-card score-dark-theme">
+            <img src="{% static 'scores/assets/images/icon-02.png' %}" alt="">
+            <h4>function</h4>
+            <h2>{{ sub_scores|get_value:'Function' }}<span>/40</span></h2>
+        </div>
+        <div class="creativity-scores score-card score-dark-theme">
+            <img src="{% static 'scores/assets/images/icon-04.png' %}" alt="">
+            <h4>creativity & innovation</h4>
+            <h2>{{ sub_scores|get_value:'Creativity & Innovation' }}<span>/50</span></h2>
+        </div>
+        <div class="engineering-score score-card score-info-theme">
+            <img src="{% static 'scores/assets/images/icon-03.png' %}" alt="">
+            <h4>Engineering & Crafting</h4>
+            <h2>{{ sub_scores|get_value:'Engineering and crafting' }}<span>/40</span></h2>
+        </div>
+        <div class="total-scores score-card">
+            <h4>total score</h4>
+            <h2>{{ total_score }}/180</h2>
+        </div>
+    </div>
+{% endblock%}
+
+<!--
+    fun - 50
+    function - 40
+    creativity - 50
+    enginnering - 40
+    total - 180
+ -->
+
+
+<!-- <p>Total score: </p>
+
+<p>Sub scores: {{sub_scores}}</p>
+
+{% for category, score in sub_scores.items %}
+    <p>{{category}} - {{ score }}</p>
+{% endfor%}
+
+<table>
+    <thead>
+        <tr>
+            <th>Criteria</th>
+            <th>Points</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for score in scores %}
+        <tr>
+            <td>{{ score.criteria.name }}</td>
+            <td>{{ score.score }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table> -->
