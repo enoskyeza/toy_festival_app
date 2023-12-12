@@ -299,6 +299,83 @@ border-radius: 8px;
 
 }
 
+.scores-details-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+}
+
+.score-card {
+  border-radius: 10px;
+  text-align: center;
+  padding: 10px 10px;
+  box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+.score-card:hover {
+  cursor: pointer;
+}
+
+.score-card img {
+  height: auto;
+  width: 30%;
+  margin-bottom: 15px;
+
+}
+
+.score-card h4 {
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 20px;
+}
+
+.score-card h2 {
+  font-weight: 700;
+  font-size: 40px;
+}
+
+.score-dark-theme {
+  background: var(--dark);
+  color: #66CCE9;
+}
+
+.score-info-theme {
+  background-color: #66CCE9;
+}
+
+.score-card span {
+  color: white;
+}
+
+.total-scores {
+  width: 100%;
+  max-width: 100%;
+  background: #FF992E;
+  margin-top: 10px;
+}
+
+.total-scores h2 {
+  font-size: 45px;
+}
+
+
+
+
+
+@media (min-width:712px) {
+  .score-card {
+    min-width: 300px;
+    flex-grow: 1;
+  }
+
+  .score-card img {
+    max-width: 60px;
+    margin-top: 20px;
+  }
+
+}
+
+
 @media (max-width:425px) {
   .nav-bar-custom {
     padding-left: 25px;
@@ -315,6 +392,74 @@ border-radius: 8px;
 
   .bio-container {
     margin-top: 0px;
+  }
+
+  .scores-details-container {
+    column-gap: 15px;
+    margin-top: 30px;
+  }
+
+  .score-card {
+    padding: 20px 10px;
+    flex-grow: 1;
+    max-width: 180px;
+  }
+
+  .score-card h4 {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .score-card h2 {
+    font-weight: 600;
+    font-size: 30px;
+  }
+
+  .total-scores {
+    width: 100%;
+    max-width: 100%;
+    padding-top: 20px;
+    padding-bottom: 15px;
+  }
+
+  .total-scores h2 {
+    font-size: 45px;
+  }
+
+}
+
+@media (max-width:375px) {
+
+  .scores-details-container {
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .score-card {
+    padding: 20px 10px;
+    flex-grow: 1;
+    max-width: 150px;
+  }
+
+  .score-card h4 {
+    font-weight: 600;
+    font-size: 13px;
+  }
+
+  .score-card h2 {
+    font-weight: 600;
+    font-size: 30px;
+  }
+
+  .total-scores {
+    width: 100%;
+    max-width: 100%;
+    padding-top: 20px;
+    padding-bottom: 15px;
+  }
+
+  .total-scores h2 {
+    font-size: 45px;
   }
 
 }
