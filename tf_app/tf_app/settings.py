@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-m7*dt2l=s-7=@!m#=5=ei#^xs2n%s&)o0#a4cctw6^@859-d7x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['kyeza.pythonanywhere.com',]
+ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1:8000']
 
 
 # Application definition
