@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     'judges.apps.JudgesConfig',
 
     'django_filters',
+    'widget_tweaks',
 ]
 
 MIDDLEWARE = [
