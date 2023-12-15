@@ -15,6 +15,7 @@ def calc_score(contestant, judge ):
     scores = Score.objects.filter(contestant=contestant, judge=judge)
     total_score = 0
     sub_scores = {}
+    has_empty_field = {}
 
     for category in categories:
         category_scores = Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category)
@@ -22,11 +23,18 @@ def calc_score(contestant, judge ):
         total_score += category_total_score
         sub_scores[category] = category_total_score
 
+        # Check for empty fields
+        if len(Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category, score=0.00)) > 0:
+            has_empty_field[category] = True
+        else:
+            has_empty_field[category] = False
+
     return {
         'contestant': contestant,
         'scores': scores,
         'total_score': total_score,
         'sub_scores': sub_scores,
+        'has_empty_field': has_empty_field,
     }
 
 @login_required
@@ -153,9 +161,11 @@ def judge_comment(request, contestant_id):
     return render(request, 'scores/judge_comment.html', {'form': form,
                                                          'contestant': contestant})
 
+
 @login_required
 def contestant_scores(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
-    scores = Score.objects.filter(contestant=contestant)
-    return render(request, 'scores/judge_scores.html', {'contestant': contestant, 'scores': scores})
+    judge = get_object_or_404(Judge, user=request.user)
+
+    return render(request, 'scores/judge_scores.html', calc_score(contestant, judge))
 

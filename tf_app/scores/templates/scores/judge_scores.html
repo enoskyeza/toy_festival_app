@@ -6,25 +6,51 @@
 
 {% block scorecontent %}
     <div class="scores-details-container">
-        <div class="fun-scores score-card score-info-theme">
+        <div class="fun-scores score-card score-info-theme position-relative">
             <img src="{% static 'scores/assets/images/icon-01.png' %}" alt="">
             <h4>fun</h4>
             <h2>{{ sub_scores|get_value:'Fun' }}<span>/50</span></h2>
+
+            {% if has_empty_field|get_value:'Fun' %}
+            <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+            {% endif %}
         </div>
-        <div class="function-scores score-card score-dark-theme">
+        <div class="function-scores score-card score-dark-theme position-relative">
             <img src="{% static 'scores/assets/images/icon-02.png' %}" alt="">
             <h4>function</h4>
             <h2>{{ sub_scores|get_value:'Function' }}<span>/40</span></h2>
+
+            {% if has_empty_field|get_value:'Function' %}
+            <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+            {% endif %}
+
         </div>
-        <div class="creativity-scores score-card score-dark-theme">
+        <div class="creativity-scores score-card score-dark-theme position-relative">
             <img src="{% static 'scores/assets/images/icon-04.png' %}" alt="">
             <h4>creativity & innovation</h4>
             <h2>{{ sub_scores|get_value:'Creativity & Innovation' }}<span>/50</span></h2>
+
+            {% if has_empty_field|get_value:'Creativity & Innovation' %}
+            <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+            {% endif %}
+
         </div>
-        <div class="engineering-score score-card score-info-theme">
+        <div class="engineering-score score-card score-info-theme position-relative">
             <img src="{% static 'scores/assets/images/icon-03.png' %}" alt="">
             <h4>Engineering & Crafting</h4>
             <h2>{{ sub_scores|get_value:'Engineering and crafting' }}<span>/40</span></h2>
+
+            {% if has_empty_field|get_value:'Engineering and crafting' %}
+            <span class="position-absolute top-0 start-100 translate-middle p-2 bg-danger border border-light rounded-circle">
+                <span class="visually-hidden">New alerts</span>
+              </span>
+            {% endif %}
         </div>
         <div class="total-scores score-card">
             <h4>total score</h4>
