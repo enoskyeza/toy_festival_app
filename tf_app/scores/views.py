@@ -1,7 +1,8 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
-from .models import Score, JudgingCriteria
+from .models import Score, JudgingCriteria, JudgeComment
+from .forms import CommentForm
 
 from register.models import Contestant
 from judges.models import Judge
@@ -105,10 +106,52 @@ def update_score(request, contestant_id):
         'filter_by_category': filter_by_category,
     })
 
+# def judge_comment(request, contestant_id):
+#     contestant = get_object_or_404(Contestant, pk=contestant_id)
+#     judge = Judge.objects.get(user=request.user)
+
+#     if request.method == 'POST':
+#         comment_value = request.POST.get(f'comment')
+#         comment_obj = JudgeComment.objects.create(contestant=contestant, judge=judge, comment=comment_value)
+#         comment_obj.save()
+#         # Handle score submission
+#         return redirect ('/judge/?name=contestant.first_name')
+
+#     return render(request, 'scores/judge_comment.html')
+
+# def judge_comment(request, contestant_id):
+#     contestant = get_object_or_404(Contestant, pk=contestant_id)
+#     judge = get_object_or_404(Judge, user=request.user)
+
+#     if request.method == 'POST':
+#         comment_value = request.POST.get('comment')  # Get the comment from POST data
+#         comment_obj = JudgeComment.objects.create(contestant=contestant, judge=judge, comment=comment_value)
+#         comment_obj.save()
+
+#         print(f'The comment is - {comment_value} - by {judge} given to { contestant }')
+
+#         return redirect('judge:judge_page', pk=contestant_id)  # Change 'judge_detail' to your detail view name
+
+#     print(f'View failed')
+#     return render (request, 'scores/judge_comment.html', {'contestant': contestant})
+
 def judge_comment(request, contestant_id):
     contestant = get_object_or_404(Contestant, pk=contestant_id)
+    judge = get_object_or_404(Judge, user=request.user)
 
-    return render(request, 'scores/judge_comment.html', {'contestant': contestant} )
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment_obj = form.save(commit=False)
+            comment_obj.contestant = contestant
+            comment_obj.judge = judge
+            comment_obj.save()
+            return redirect('judge:judge-page')  # Change 'judge_detail' to your detail view name
+    else:
+        form = CommentForm()
+
+    return render(request, 'scores/judge_comment.html', {'form': form,
+                                                         'contestant': contestant})
 
 @login_required
 def contestant_scores(request, contestant_id):

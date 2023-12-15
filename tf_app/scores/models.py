@@ -24,3 +24,8 @@ class Score(models.Model):
     contestant = models.ForeignKey(Contestant, on_delete=models.CASCADE)
     criteria = models.ForeignKey(JudgingCriteria, on_delete=models.CASCADE)
     score = models.DecimalField(max_digits=5, decimal_places=2)
+
+class JudgeComment(models.Model):
+    judge = models.ForeignKey(Judge, on_delete=models.CASCADE)
+    contestant = models.ForeignKey(Contestant, on_delete=models.CASCADE)
+    comment = models.TextField()
