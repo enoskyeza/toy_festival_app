@@ -72,3 +72,8 @@ class RegistrationView(View):
 
         #If form is not valid, re-render the form with errors
         return render(request, self.template_name, {form: form})
+
+def contestant_list_view(request):
+    contestants = Contestant.objects.all()
+
+    return render(request, 'reg/contestant_list.html', {'contestants':contestants})

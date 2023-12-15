@@ -7,22 +7,21 @@
 {% block content %}
     <h2 class="fw-bold">Welcome {{ judge.name }}</h2>
     <div class="Card-filter">
-        <div class="CardInner">
-            <label>Search for contestant</label>
-            <div class="container">
-                <div class="Icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                        stroke="#657789" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-                        class="feather feather-search">
-                        <circle cx="11" cy="11" r="8" />
-                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                    </svg>
-                </div>
-                <div class="InputContainer" id="search-input">
-                    <input placeholder="Search..." />
-                </div>
+            <form method='get'>
+                {{ namefilter.form }}
+                <button type='submit'>Search</button>
+            </form>
+            {% comment %} <div class="Icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                    stroke="#657789" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                    class="feather feather-search">
+                    <circle cx="11" cy="11" r="8" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
             </div>
-        </div>
+            <div class="InputContainer" >
+                <input class="inputEl" id="search-input" type='search' name="query" placeholder="Search..." />
+            </div> {% endcomment %}
     </div>
     <div class="filter-btn-group">
         <button class="fw-bold active" id='all-btn'>All</button>
@@ -36,15 +35,25 @@
             <p>{{ contestant.first_name }} {{ contestant.last_name }} </p>
             <div class="score-btns">
                 {% if score_by_contestant|get_value:contestant.id %}
-                    <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">Update Score</a>
+                    <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">
+                        Update Score
+                    </a>
                 {% else %}
                     <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
                 {% endif %}
-                <a class="btn btn-info text-light fw-bold">Comment</a>
+                <a href="{% url 'score:comment' contestant_id=contestant.id %}" class="btn btn-info text-light fw-bold">Comment</a>
+                <a href="#" class="btn btn-primary text-light fw-bold position-relative">
+                    View Scores
+                    {% comment %} <span class="position-absolute top-0 start-90 translate-middle badge rounded-pill bg-danger">
+                        06/18
+                        <span class="visually-hidden">unread messages</span>
+                    </span> {% endcomment %}
+                </a>
             </div>
         </div>
         {% endfor %}
     </div>
+
 {% endblock %}
 
 {% block scripts %}

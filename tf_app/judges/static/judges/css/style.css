@@ -50,25 +50,15 @@ body {
 }
 
 .Card-filter {
-  padding: 1px;
+  margin-top: 50px;
+  margin-bottom: 20px;
+  display: flex;
   border-radius: var(--border-radius);
   background: linear-gradient(-67deg, rgba(#c8d8e7, .7), rgba(255,255,255,.8));
   overflow: hidden;
-  box-shadow:
-    -2px -2px 6px rgba(#fff, .6),
-    2px 2px 12px #c8d8e7;
-  width: 380px;
+  max-width: 350px;
 }
 
-.CardInner {
-  padding: 16px 16px;
-  background-color: #e2e9f4;
-  border-radius: var(--border-radius);
-}
-
-.container {
-  display: flex;
-}
 
 .Icon {
   min-width: 46px;
@@ -87,25 +77,15 @@ body {
   }
 }
 
-label {
-  font-family: "Hind", sans-serif;
-  display: block;
-  /* color: #3c4b66; */
-  /* margin-bottom: 12px;
-  background: linear-gradient(45deg, rgba(#6b7b8f, 1), #3c4b66);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent; */
-  color: black;
-}
-
 .InputContainer {
   width: 100%;
 }
 
 input {
-  background-color: #e3edf7;
-  padding: 16px 32px;
+  background-color: white;
+  padding: 8px 16px;
   border: none;
+  border-bottom: 2px solid ;
   display: block;
   font-family: 'Orbitron', sans-serif;
   font-weight: 600;
@@ -155,7 +135,6 @@ input {
 }
 
 .filter-btn-group {
-  margin-top: 25px;
   height: 50px;
   width: 100%;
   max-width: 500px;
@@ -384,7 +363,29 @@ border-radius: 8px;
   font-size: 45px;
 }
 
+/* CONTESTANT LIST PAGE */
 
+.table-card {
+  background: #2B2A9C;
+  color: white;
+}
+
+.table-header {
+  font-weight: bold;
+  background: #22217a;
+}
+
+.table-body {
+  overflow: hidden;
+}
+
+.table-body:hover {
+  overflow: scroll;
+}
+
+.contestant-table {
+  color: white;
+}
 
 
 @media (max-width:425px) {
@@ -430,3 +431,5 @@ border-radius: 8px;
   }
 
 }
+
+
