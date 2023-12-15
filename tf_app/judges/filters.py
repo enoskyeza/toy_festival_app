@@ -5,17 +5,7 @@ from .models import Judge
 from register.models import Contestant
 from scores.models import Score
 
-# class ContestantFilter(django_filters.FilterSet):
-#     age_category = django_filters.CharFilter(method='filter_by_age_category')
 
-#     class Meta:
-#         model = Contestant
-#         fields = ['first_name','last_name','age', 'age_category']
-
-#     def filter_by_age_category(self, queryset, name, value):
-#         if value in ['young', 'middle', 'old']:  # Check if the value is a valid age category
-#             return queryset.filter(age_category=value)
-#         return queryset
 class ContestantFilter(django_filters.FilterSet):
     name = django_filters.CharFilter(method='filter_by_name')
 

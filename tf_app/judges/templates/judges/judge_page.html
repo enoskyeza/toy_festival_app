@@ -4,24 +4,33 @@
 
 {% load judge_custom_filters %}
 
+{% load widget_tweaks %}
+
+
 {% block content %}
     <h2 class="fw-bold">Welcome {{ judge.name }}</h2>
     <div class="Card-filter">
-            <form method='get'>
-                {{ namefilter.form }}
-                <button type='submit'>Search</button>
+            <form method='get' class="row g-0">
+                <div class="col-2">
+                    <button class="Icon icon-btn" type='submit'>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
+                            stroke="#657789" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
+                            class="feather feather-search">
+                            <circle cx="11" cy="11" r="8" />
+                            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                        </svg>
+                    </button>
+                </div>
+                <div class="col-10">
+                    <div class="InputContainer" >
+                        {% for field in namefilter.form %}
+                            {% render_field field class="inputEl" placeholder="Search..." %}
+                        {% endfor%}
+                        {% comment %} {{ namefilter.form|attr:"class:" }} {% endcomment %}
+                        {% comment %} <input class="inputEl" id="search-input" type='search' name="query" placeholder="Search..." /> {% endcomment %}
+                    </div>
+                </div>
             </form>
-            {% comment %} <div class="Icon">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none"
-                    stroke="#657789" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"
-                    class="feather feather-search">
-                    <circle cx="11" cy="11" r="8" />
-                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
-            </div>
-            <div class="InputContainer" >
-                <input class="inputEl" id="search-input" type='search' name="query" placeholder="Search..." />
-            </div> {% endcomment %}
     </div>
     <div class="filter-btn-group">
         <button class="fw-bold active" id='all-btn'>All</button>
