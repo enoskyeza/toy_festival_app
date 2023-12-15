@@ -26,17 +26,22 @@ def judge_page(request):
 
     # Check if contestant has scores
     score_by_contestant = {}
+    zero_score_fields = {}
 
     for contestant in contestants:
         has_score = Score.objects.filter(judge=judge, contestant=contestant).exists()
         score_by_contestant[contestant.id] = has_score
+
+        if has_score:
+            zero_score_fields[contestant.id] = 18 - len(Score.objects.filter(contestant=contestant, judge=judge, score=0.00))
 
     return render(request, 'judges/judge_page.html', {'judge':judge,
                                                       'contestants':contestants,
                                                       'score_by_contestant':score_by_contestant,
                                                       'namefilter':nameFilter,
                                                       'genderfilter':genderFilter,
-                                                      'categoryfilter':categoryFilter,} )
+                                                      'categoryfilter':categoryFilter,
+                                                      'zero_score_fields': zero_score_fields} )
 
 
 
