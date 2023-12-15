@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     'admin_dashboard.apps.AdminDashboardConfig',
     'scores.apps.ScoresConfig',
     'judges.apps.JudgesConfig',
+
+    'django_filters',
 ]
 
 MIDDLEWARE = [

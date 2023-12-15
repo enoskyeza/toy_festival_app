@@ -105,6 +105,10 @@ def update_score(request, contestant_id):
         'filter_by_category': filter_by_category,
     })
 
+def judge_comment(request, contestant_id):
+    contestant = get_object_or_404(Contestant, pk=contestant_id)
+
+    return render(request, 'scores/judge_comment.html', {'contestant': contestant} )
 
 @login_required
 def contestant_scores(request, contestant_id):

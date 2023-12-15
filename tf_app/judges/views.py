@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from .forms import JudgeLoginForm
 from .models import Judge
+from .filters import ContestantFilter, ContestantAgeFilter, ContestantGenderFilter
 
 from register.models import Contestant
 from scores.models import Score
@@ -13,7 +14,15 @@ from utils.decorators import judge_required
 @judge_required
 def judge_page(request):
     contestants = Contestant.objects.all()
+
     judge = Judge.objects.get(user=request.user)
+
+    nameFilter = ContestantFilter(request.GET, queryset=contestants)
+    genderFilter = ContestantGenderFilter(request.GET, queryset=contestants)
+    categoryFilter = ContestantAgeFilter(request.GET, queryset=contestants)
+
+    contestants = nameFilter.qs
+
 
     # Check if contestant has scores
     score_by_contestant = {}
@@ -24,7 +33,10 @@ def judge_page(request):
 
     return render(request, 'judges/judge_page.html', {'judge':judge,
                                                       'contestants':contestants,
-                                                      'score_by_contestant':score_by_contestant,} )
+                                                      'score_by_contestant':score_by_contestant,
+                                                      'namefilter':nameFilter,
+                                                      'genderfilter':genderFilter,
+                                                      'categoryfilter':categoryFilter,} )
 
 
 

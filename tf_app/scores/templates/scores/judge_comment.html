@@ -1,0 +1,17 @@
+{% extends "scores/scores_base.html" %}
+
+{% load static %}
+
+{% block scorecontent %}
+
+<form method='post'>
+    {% csrf_token %}
+
+    <textarea type="text" class="form-control" placeholder="Add comments..." aria-label="judge-comment" rows="7" ></textarea>
+
+    <div class="score-view-btn">
+        <a href=" {% url 'judge:judge-page' %}" class='btn btn-success' type='submit' >Save</a>
+    </div>
+</form>
+
+{% endblock %}
