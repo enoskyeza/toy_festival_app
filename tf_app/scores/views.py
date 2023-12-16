@@ -15,6 +15,7 @@ def calc_score(contestant, judge ):
     scores = Score.objects.filter(contestant=contestant, judge=judge)
     total_score = 0
     sub_scores = {}
+    has_empty_field = {}
 
     for category in categories:
         category_scores = Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category)
@@ -22,11 +23,18 @@ def calc_score(contestant, judge ):
         total_score += category_total_score
         sub_scores[category] = category_total_score
 
+        # Check for empty fields
+        if len(Score.objects.filter(contestant=contestant, judge=judge, criteria__category__name=category, score=0.00)) > 0:
+            has_empty_field[category] = True
+        else:
+            has_empty_field[category] = False
+
     return {
         'contestant': contestant,
         'scores': scores,
         'total_score': total_score,
         'sub_scores': sub_scores,
+        'has_empty_field': has_empty_field,
     }
 
 @login_required
@@ -106,6 +114,72 @@ def update_score(request, contestant_id):
         'filter_by_category': filter_by_category,
     })
 
+
+def judge_comment(request, contestant_id):
+    contestant = get_object_or_404(Contestant, pk=contestant_id)
+    judge = get_object_or_404(Judge, user=request.user)
+
+    if request.method == 'POST':
+        form = CommentForm(request.POST)
+        if form.is_valid():
+            comment_obj = form.save(commit=False)
+            comment_obj.contestant = contestant
+            comment_obj.judge = judge
+            comment_obj.save()
+            return redirect('judge:judge-page')  # Change 'judge_detail' to your detail view name
+    else:
+        form = CommentForm()
+
+    return render(request, 'scores/judge_comment.html', {'form': form,
+                                                         'contestant': contestant})
+
+
+@login_required
+def contestant_scores(request, contestant_id):
+    contestant = get_object_or_404(Contestant, pk=contestant_id)
+    judge = get_object_or_404(Judge, user=request.user)
+
+    return render(request, 'scores/judge_scores.html', calc_score(contestant, judge))
+
+
+
+# Event scores calculation functions
+def total_by_judge():
+    contestants = Contestant.objects.all()
+    judges = Judge.objects.all()
+    comments = JudgeComment.objects.all()
+
+    total_by_judge = {}
+
+    total_all_judges = {}
+
+    avg_all_judges = {}
+
+
+    for contestant in contestants:
+        judge_totals = []
+        for judge in judges:
+            scores = Score.objects.filter(contestant=contestant, judge=judge)
+            total_score = scores.aggregate(total_sum=Sum('score'))['total_sum'] or 0
+            judge_totals.append(total_score)
+
+        total_by_judge[contestant.id] = judge_totals
+        total_all_judges[contestant.id] = sum(judge_totals)
+        avg_all_judges[contestant.id] = sum(judge_totals) / len(judge_totals)
+
+    return {'total_by_judge': total_by_judge,
+            'total_all_judges': total_all_judges,
+            'avg_all_judges': avg_all_judges,
+            'contestants': contestants
+            }
+
+@login_required
+def event_scores(request):
+
+    return render(request, 'scores/event_scores.html', total_by_judge())
+
+
+
 # def judge_comment(request, contestant_id):
 #     contestant = get_object_or_404(Contestant, pk=contestant_id)
 #     judge = Judge.objects.get(user=request.user)
@@ -134,28 +208,3 @@ def update_score(request, contestant_id):
 
 #     print(f'View failed')
 #     return render (request, 'scores/judge_comment.html', {'contestant': contestant})
-
-def judge_comment(request, contestant_id):
-    contestant = get_object_or_404(Contestant, pk=contestant_id)
-    judge = get_object_or_404(Judge, user=request.user)
-
-    if request.method == 'POST':
-        form = CommentForm(request.POST)
-        if form.is_valid():
-            comment_obj = form.save(commit=False)
-            comment_obj.contestant = contestant
-            comment_obj.judge = judge
-            comment_obj.save()
-            return redirect('judge:judge-page')  # Change 'judge_detail' to your detail view name
-    else:
-        form = CommentForm()
-
-    return render(request, 'scores/judge_comment.html', {'form': form,
-                                                         'contestant': contestant})
-
-@login_required
-def contestant_scores(request, contestant_id):
-    contestant = get_object_or_404(Contestant, pk=contestant_id)
-    scores = Score.objects.filter(contestant=contestant)
-    return render(request, 'scores/judge_scores.html', {'contestant': contestant, 'scores': scores})
-

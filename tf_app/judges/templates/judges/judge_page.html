@@ -34,7 +34,7 @@
     </div>
     <div class="filter-btn-group">
         <button class="fw-bold active" id='all-btn'>All</button>
-        <button class="fw-bold">Age Category</button>
+        <button class="fw-bold">Filter By</button>
         <button class="fw-bold">Gender</button>
     </div>
     <div class="contestant-section" id="contestant-section-id">
@@ -47,17 +47,18 @@
                     <a href="{% url 'score:update-scores' contestant_id=contestant.id %}"class="btn btn-warning text-light fw-bold">
                         Update Score
                     </a>
+
+                    <a href="{% url 'score:judge-scores' contestant_id=contestant.id %}" class="btn btn-primary text-light fw-bold position-relative">
+                        View Scores
+                        <span class="position-absolute top-0 start-90 translate-middle badge rounded-pill bg-danger">
+                            {{ zero_score_fields|get_value:contestant.id }}/18
+                            <span class="visually-hidden">unread messages</span>
+                        </span>
+                    </a>
                 {% else %}
                     <a href="{% url 'score:submit-scores' contestant_id=contestant.id %}" class="btn btn-success text-light fw-bold">Add Score</a>
                 {% endif %}
                 <a href="{% url 'score:comment' contestant_id=contestant.id %}" class="btn btn-info text-light fw-bold">Comment</a>
-                <a href="#" class="btn btn-primary text-light fw-bold position-relative">
-                    View Scores
-                    {% comment %} <span class="position-absolute top-0 start-90 translate-middle badge rounded-pill bg-danger">
-                        06/18
-                        <span class="visually-hidden">unread messages</span>
-                    </span> {% endcomment %}
-                </a>
             </div>
         </div>
         {% endfor %}
