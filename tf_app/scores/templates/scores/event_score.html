@@ -1,0 +1,29 @@
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Contestant</th>
+            <th>Age</th>
+            <th>Judge(1)</th>
+            <th>Judge(2)</th>
+            <th>Final Score</th>
+            <th>Comments</th>
+        </tr>
+    </thead>
+    <tbody>
+        <!-- You can add rows of contestants and their details here -->
+        {% for contestant in contestants %}
+        <tr>
+            <td>{{ forloop.counter }}</td>
+            <td>{{ contestant }}</td>
+            <td>{{ contestant.age }}</td>
+            <td>{{ judge_one_total_score }}</td>
+            <td>{{ judge_one_total_score }}</td>
+            <td>{{ average }}</td>
+            <td>{{ comments }}</td>
+        </tr>
+    </tbody>
+</table>
+
+<td>{{ average }}</td>
+<td>{{ total }}</td>
