@@ -147,7 +147,7 @@ def contestant_scores(request, contestant_id):
 def total_by_judge():
     contestants = Contestant.objects.all()
     judges = Judge.objects.all()
-    comments = JudgeComment.all()
+    comments = JudgeComment.objects.all()
 
     total_by_judge = {}
 
@@ -170,6 +170,7 @@ def total_by_judge():
     return {'total_by_judge': total_by_judge,
             'total_all_judges': total_all_judges,
             'avg_all_judges': avg_all_judges,
+            'contestants': contestants
             }
 
 @login_required
