@@ -147,8 +147,14 @@ def contestant_scores(request, contestant_id):
 def total_by_judge():
     contestants = Contestant.objects.all()
     judges = Judge.objects.all()
+    comments = JudgeComment.all()
 
     total_by_judge = {}
+
+    total_all_judges = {}
+
+    avg_all_judges = {}
+
 
     for contestant in contestants:
         judge_totals = []
@@ -158,6 +164,13 @@ def total_by_judge():
             judge_totals.append(total_score)
 
         total_by_judge[contestant.id] = judge_totals
+        total_all_judges[contestant.id] = sum(judge_totals)
+        avg_all_judges[contestant.id] = sum(judge_totals) / len(judge_totals)
+
+    return {'total_by_judge': total_by_judge,
+            'total_all_judges': total_all_judges,
+            'avg_all_judges': avg_all_judges,
+            }
 
 @login_required
 def event_scores(request):
