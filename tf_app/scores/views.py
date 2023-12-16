@@ -174,13 +174,8 @@ def total_by_judge():
 
 @login_required
 def event_scores(request):
-    context = {
-        'contestants' : Contestant.objects.all(),
-        'judges' : Judge.objects.all(),
-        'scores' : Score.objects.all(),
-    }
 
-    return render(request, 'scores/event_scores.html', context)
+    return render(request, 'scores/event_scores.html', total_by_judge())
 
 
 
