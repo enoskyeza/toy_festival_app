@@ -17,13 +17,13 @@
             <td>{{ forloop.counter }}</td>
             <td>{{ contestant }}</td>
             <td>{{ contestant.age }}</td>
-            <td>{{ judge_one_total_score }}</td>
-            <td>{{ judge_one_total_score }}</td>
-            <td>{{ average }}</td>
+            <td>{{ total_by_judge|get_value:contestant.id }}</td>
+            <td>{{ total_by_judge|get_value:contestant.id }}</td>
+            <td>{{ total_all_judges|get_value:contestant.id }}</td>
             <td>{{ comments }}</td>
         </tr>
     </tbody>
 </table>
 
-<td>{{ average }}</td>
-<td>{{ total }}</td>
+<td>{{ avg_all_judges|get_value:contestant.id }}</td>
+<td>{{ total_all_judges|get_value:contestant.id }}</td>
