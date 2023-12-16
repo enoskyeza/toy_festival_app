@@ -208,3 +208,62 @@ def event_scores(request):
 
 #     print(f'View failed')
 #     return render (request, 'scores/judge_comment.html', {'contestant': contestant})
+
+
+# Refactored Overall score view
+from django.db.models import Sum, Avg
+from django.shortcuts import render
+from .models import Contestant, Judge, JudgeComment, Score
+
+@login_required
+def overall_scores(request):
+    # Filter contestants by age category, gender, etc. (customize as needed)
+    age_category = request.GET.get('age_category')
+    gender = request.GET.get('gender')
+
+    contestants = Contestant.objects.all()
+
+    if age_category:
+        # Filter contestants by age category
+        # Assuming the age is stored in a field named 'age' in the Contestant model
+        if age_category == '3-7':
+            contestants = contestants.filter(age__range=(3, 7))
+        elif age_category == '8-12':
+            contestants = contestants.filter(age__range=(8, 12))
+        elif age_category == '13-17':
+            contestants = contestants.filter(age__range=(13, 17))
+
+    if gender:
+        # Filter contestants by gender
+        # Assuming gender is a field in the Contestant model
+        contestants = contestants.filter(gender=gender)
+
+    # Retrieve all judges and judge comments
+    judges = Judge.objects.all()
+    comments = JudgeComment.objects.all()
+
+    contestant_scores = []
+
+    for contestant in contestants:
+        # Fetch scores for each contestant
+        scores = Score.objects.filter(contestant=contestant, judge__in=judges)
+        judge_scores = scores.values_list('judge_id', 'score')
+
+        total_score = scores.aggregate(total_sum=Sum('score'))['total_sum'] or 0
+        avg_score = scores.aggregate(avg_score=Avg('score'))['avg_score'] or 0
+
+        contestant_scores.append({
+            'contestant': contestant,
+            'total_score': total_score,
+            'avg_score': avg_score,
+            'judge_scores': judge_scores,  # Store judge scores for each contestant
+        })
+
+    # Sort contestant scores by highest total score
+    contestant_scores = sorted(contestant_scores, key=lambda x: x['total_score'], reverse=True)
+
+    return render(request, 'scores/overall_scores.html', {
+        'contestant_scores': contestant_scores,
+        'age_category': age_category,
+        'gender': gender,
+    })

@@ -1,0 +1,81 @@
+<!-- event_scores.html -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Event Scores</title>
+    <style>
+        /* Add your CSS styles here */
+        /* For example, to style the table */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Filter buttons -->
+<div>
+    <form method="GET" action="">
+        <label for="age_category">Age Category:</label>
+        <select name="age_category" id="age_category">
+            <option value="">All</option>
+            <option value="3-7">3-7 years</option>
+            <option value="8-12">8-12 years</option>
+            <option value="13-17">13-17 years</option>
+        </select>
+
+        <label for="gender">Gender:</label>
+        <select name="gender" id="gender">
+            <option value="">All</option>
+            <option value="Male">Male</option>
+            <option value="Female">Female</option>
+        </select>
+
+        <button type="submit">Filter</button>
+    </form>
+</div>
+
+<!-- Display scores in a table -->
+<table>
+    <thead>
+        <tr>
+            <th>#</th>
+            <th>Contestant</th>
+            <th>Age</th>
+            <th>Judge 1 Results</th>
+            <th>Judge 2 Results</th>
+            <th>Total Points</th>
+            <th>Average</th>
+            <th>Comments</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for contestant_score in contestant_scores %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ contestant_score.contestant }}</td>
+                <td>{{ contestant_score.contestant.age }}</td>
+                <!-- Display individual judge scores for each participant -->
+                {% for judge_total in contestant_score.judge_totals %}
+                    <td>{{ judge_total.judge_total }}</td>
+                {% endfor %}
+                <td>{{ contestant_score.total_score }}</td>
+                <td>{{ avg }}</td>
+                <td><!-- Display comments here --></td>
+            </tr>
+        {% endfor %}
+    </tbody>
+</table>
+
+</body>
+</html>
