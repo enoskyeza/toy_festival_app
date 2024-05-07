@@ -3,7 +3,12 @@ from django.contrib.auth.models import User
 
 
 # Create your models here.
+class Author(models.Model):
+    pass
+
+
 class Post(models.Model):
+    author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True)
     created = models.DateTimeField(auto_now_add=True)
     like = models.IntegerField(default=0)
     title = models.CharField(max_length=200)
