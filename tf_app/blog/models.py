@@ -9,7 +9,7 @@ class Post(models.Model):
     title = models.CharField(max_length=200)
     copy = models.TextField()
     subcopy = models.TextField()
-
+    image = models.ImageField()
 
     def like_post(self):
         """
