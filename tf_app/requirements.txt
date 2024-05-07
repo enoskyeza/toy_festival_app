@@ -30,6 +30,8 @@ decorator==5.1.1
 defusedxml==0.7.1
 Deprecated==1.2.13
 Django==4.1
+django-filter
+django-widget-tweaks
 django-countries==7.3.2
 django-countries-with-calling-codes==0.1.1
 django-crispy-forms==1.14.0
