@@ -1,9 +1,19 @@
 from django.db import models
 from django.contrib.auth.models import User
 
+
 # Create your models here.
 class Post(models.Model):
     created = models.DateTimeField(auto_now_add=True)
+    like = models.IntegerField(default=0)
+
+    def like_post(self):
+        """
+        Increment the number of likes for the current blog post.
+        """
+        self.like += 1
+        self.save()
+
 # class Comments(models.Model):
 #     created = models.DateTimeField(auto_now_add=True)
 #     comment = models.CharField()
