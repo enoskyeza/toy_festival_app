@@ -43,9 +43,11 @@ INSTALLED_APPS = [
     'admin_dashboard.apps.AdminDashboardConfig',
     'scores.apps.ScoresConfig',
     'judges.apps.JudgesConfig',
+    'blog.apps.BlogConfig',
 
     'django_filters',
     'widget_tweaks',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -136,3 +138,11 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # settings.py
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+REST_FRAMEWORK = {
+    # Use Django's standard `django.contrib.auth` permissions,
+    # or allow read-only access for unauthenticated users.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+    ]
+}

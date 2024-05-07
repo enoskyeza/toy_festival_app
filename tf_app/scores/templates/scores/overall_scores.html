@@ -52,9 +52,9 @@
             <th>#</th>
             <th>Contestant</th>
             <th>Age</th>
+            <th>Total Points</th>
             <th>Judge 1 Results</th>
             <th>Judge 2 Results</th>
-            <th>Total Points</th>
             <th>Average</th>
             <th>Comments</th>
         </tr>
@@ -65,11 +65,11 @@
                 <td>{{ forloop.counter }}</td>
                 <td>{{ contestant_score.contestant }}</td>
                 <td>{{ contestant_score.contestant.age }}</td>
+                <td>{{ contestant_score.total_score }}</td>
                 <!-- Display individual judge scores for each participant -->
                 {% for judge_total in contestant_score.judge_totals %}
                     <td>{{ judge_total.judge_total }}</td>
                 {% endfor %}
-                <td>{{ contestant_score.total_score }}</td>
                 <td>{{ avg }}</td>
                 <td><!-- Display comments here --></td>
             </tr>
