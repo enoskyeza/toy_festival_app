@@ -17,7 +17,7 @@ def user_directory_path(instance, filename):
 
 class Author(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.ImageField(blank=True)
+    image = models.ImageField(upload_to=user_directory_path, blank=True)
 
     def __str__(self):
         return f'{self.user.first_name} {self.user.last_name}'
@@ -30,7 +30,7 @@ class Post(models.Model):
     title = models.CharField(max_length=200)
     copy = models.TextField()
     subcopy = models.TextField(blank=True)
-    image = models.ImageField(blank=True)
+    image = models.ImageField(upload_to=user_directory_path, blank=True)
 
     def like_post(self):
         """
