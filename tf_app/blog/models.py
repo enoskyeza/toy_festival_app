@@ -7,6 +7,9 @@ class Author(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     image = models.ImageField(blank=True)
 
+    def __str__(self):
+        return f'{self.user.first_name} {self.user.last_name}'
+
 
 class Post(models.Model):
     author = models.ForeignKey(Author, on_delete=models.SET_NULL, null=True)
