@@ -11,8 +11,18 @@ def user_directory_path(instance, filename):
     model_name = instance.__class__.__name__.lower()
     # Generate a slug from the filename
     slug = slugify(filename)
+
+    # Check if the instance is Author or Post and set the user_id accordingly
+    if model_name == 'author':
+        user_id = instance.user.id
+    elif model_name == 'post':
+        user_id = instance.author.user.id
+    else:
+        # Handle unexpected model types if necessary
+        user_id = 'default'
+
     # Upload to MEDIA_ROOT/user_<id>/model_name/<slug>
-    return f'user_{instance.author.user.id}/{model_name}/{slug}'
+    return f'user_{user_id}/{model_name}/{slug}'
 
 
 class Author(models.Model):
