@@ -24,3 +24,16 @@ class Post(models.Model):
         self.like += 1
         self.save()
 
+
+class Comment(models.Model):
+    created = models.DateTimeField(auto_now_add=True)
+    name = models.CharField(max_length=100)
+    content = models.TextField()
+    like = models.IntegerField(default=0)
+
+    def like_comment(self):
+        """
+        Increment the number of likes for the current blog post.
+        """
+        self.like += 1
+        self.save()
