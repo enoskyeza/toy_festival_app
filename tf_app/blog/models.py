@@ -1,8 +1,20 @@
+import os
+
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils.text import slugify
 
 
 # Create your models here.
+def user_directory_path(instance, filename):
+    # Get the model name (Author or Post)
+    model_name = instance.__class__.__name__.lower()
+    # Generate a slug from the filename
+    slug = slugify(filename)
+    # Upload to MEDIA_ROOT/user_<id>/model_name/<slug>
+    return f'user_{instance.author.user.id}/{model_name}/{slug}'
+
+
 class Author(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     image = models.ImageField(blank=True)
@@ -37,7 +49,7 @@ class Comment(models.Model):
 
     def like_comment(self):
         """
-        Increment the number of likes for the current blog post.
+        Increment the number of likes for the comment.
         """
         self.like += 1
         self.save()
