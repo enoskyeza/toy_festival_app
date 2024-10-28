@@ -1,62 +1,36 @@
 from django.db import models
-from django.db.models.signals import post_save
-from django.dispatch import receiver
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
+from datetime import datetime
 
+from core.models import BaseModel
 
 
 class Payment(models.Model):
-    class PaymentType(models.TextChoices):
-        mobile_money = "Mobile Money", ("MOBILE MONEY")
-        cash = 'cash', ("CASH")
+    class PaymentMethod(models.TextChoices):
+        mobile_money = "mobile_money", _("Mobile Money")
+        cash = 'cash', _("Cash")
 
-    class PaymentStatus(models.TextChoices):
-        PAID = 'PAID', ('PAID')
-        NOT_PAID = 'NOT_PAID', ('NOT_PAID')
-
-    pay_type = models.CharField(max_length=15, choices=PaymentType.choices)
-    pay_status = models.CharField(max_length=15, choices=PaymentStatus.choices)
+    payment_method = models.CharField(max_length=15, choices=PaymentMethod.choices)
 
     def __str__(self):
-        return f'{self.pay_type} - {self.pay_status}'
+        return f'{self.payment_method}'
 
 
-# class Contestant(models.Model):
+class Contestant(BaseModel):
+    class Meta:
+        ordering = ['-created_at']
+        verbose_name = _('Contestant')
+        verbose_name_plural = _('Contestants')
 
-#     class ContestantGender(models.TextChoices):
-#         MALE = 'M', _('Male')
-#         FEMALE = 'F', _('Female')
-
-#     identifier = models.CharField(max_length=15, unique=True, blank=True, null=True)
-#     first_name = models.CharField(max_length=100)
-#     last_name = models.CharField(max_length=100)
-#     email = models.EmailField(max_length=254, blank='True')
-#     age = models.IntegerField()
-#     gender = models.CharField(max_length=1, choices=ContestantGender.choices)
-#     school = models.CharField(max_length=100)
-#     payment_status = models.ForeignKey(Payment, on_delete=models.SET_NULL, blank=True, null=True)
-#     parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=True, null=True)
-
-#     def __str__(self):
-#         return f'{self.first_name} {self.last_name}'
-
-#     @property
-#     def age_category(self):
-#         if 3 <= self.age <= 7:
-#             return 'young'
-#         elif 8 <= self.age <= 12:
-#             return 'middle'
-#         elif 13 <= self.age <= 17:
-#             return 'old'
-#         else:
-#             return 'Unknown'
-
-class Contestant(models.Model):
 
     class ContestantGender(models.TextChoices):
         MALE = 'M', _('Male')
         FEMALE = 'F', _('Female')
+
+    class PaymentStatus(models.TextChoices):
+        PAID = 'PAID', ('PAID')
+        NOT_PAID = 'NOT_PAID', ('NOT_PAID')
 
     identifier = models.CharField(max_length=15, unique=True, blank=True, null=True)
     first_name = models.CharField(max_length=100)
@@ -65,45 +39,45 @@ class Contestant(models.Model):
     age = models.IntegerField()
     gender = models.CharField(max_length=1, choices=ContestantGender.choices)
     school = models.CharField(max_length=100)
-    payment_status = models.ForeignKey('Payment', on_delete=models.SET_NULL, blank=True, null=True)
+    payment_status = models.CharField(max_length=15, choices=PaymentStatus.choices, default=PaymentStatus.NOT_PAID)
+    payment_method = models.ForeignKey('Payment', on_delete=models.SET_NULL, blank=True, null=True)
     parent = models.ForeignKey('Parent', on_delete=models.SET_NULL, blank=True, null=True)
 
     AGE_CATEGORY_CHOICES = [
-        ('young', _('Young')),
-        ('middle', _('Middle')),
-        ('old', _('Old')),
-        ('Unknown', _('Unknown')),
+        ('junior', _('Junior')),  # Ages 3-7
+        ('intermediate', _('Intermediate')),  # Ages 8-12
+        ('senior', _('Senior')),  # Ages 13-17
     ]
 
-    age_category = models.CharField(max_length=10, choices=AGE_CATEGORY_CHOICES, default='Unknown', editable=True, blank=True, null=True)
+    age_category = models.CharField(max_length=10, choices=AGE_CATEGORY_CHOICES, editable=False, blank=True, null=True)
+
+    def save(self, *args, **kwargs):
+        if not self.identifier and not self.id:
+            super().save(*args, **kwargs)
+
+        if not self.identifier:
+            current_year = datetime.now().year % 100
+            self.identifier = f'TF{current_year}{self.id:03d}'
+
+        age = int(self.age or 0)
+        if 3 <= age <= 7:
+            self.age_category = 'junior'
+        elif 8 <= age <= 12:
+            self.age_category = 'intermediate'
+        elif 13 <= age <= 17:
+            self.age_category = 'senior'
+        else:
+            self.age_category = None
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
 
-    def save(self, *args, **kwargs):
-        if 3 <= self.age <= 7:
-            self.age_category = 'young'
-        elif 8 <= self.age <= 12:
-            self.age_category = 'middle'
-        elif 13 <= self.age <= 17:
-            self.age_category = 'old'
-        else:
-            self.age_category = 'Unknown'
-        super().save(*args, **kwargs)
 
-@receiver(post_save, sender=Contestant)
-def generate_contestant_identifier(sender, instance, created, **kwargs):
-    if created:
-        # Only generate the identifier if the object is being created (not updated)
-        instance.identifier = f'TF23{instance.id:03d}'
-        Contestant.objects.filter(pk=instance.pk).update(identifier=instance.identifier)
-
-
-
-class Parent(models.Model):
+class Parent(BaseModel):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    proffession = models.CharField(max_length=100)
+    profession = models.CharField(max_length=100)
     address = models.CharField(max_length=100)
 
     # Email & Number Validator if they are required fields
@@ -118,6 +92,3 @@ class Parent(models.Model):
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
-
-class Judge:
-    pass
