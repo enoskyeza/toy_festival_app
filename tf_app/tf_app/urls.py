@@ -16,17 +16,12 @@ Including another URLconf
 from django.contrib import admin
 from django.contrib.auth import views as auth_views
 from django.urls import path, include
-from admin_dashboard.views import custom_login
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('dashboard', include('admin_dashboard.urls')),
-        # path('', include('admin_volt.urls')),
     path('', include('register.urls')),
-    path('score/', include('scores.urls')),
-    path('judge/', include('judges.urls')),
-    path('accounts/login/', custom_login, name='custom_login'),
+    # path('score/', include('scores.urls')),
     path('logout/', auth_views.LogoutView.as_view(), name='logout'),
     path('api-auth/', include('rest_framework.urls')),
-    path('blog/', include('blog.urls')),
+    # path('blog/', include('blog.urls')),
 ]
