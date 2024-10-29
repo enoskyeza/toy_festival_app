@@ -2,9 +2,9 @@ from rest_framework import routers
 from .views import PaymentViewSet, ContestantViewSet, ParentViewSet
 
 router = routers.DefaultRouter()
-router.register(r'register/payments', PaymentViewSet)
-router.register(r'register/contestants', ContestantViewSet)
-router.register(r'register/parents', ParentViewSet)
+router.register(r'payments', PaymentViewSet)
+router.register(r'contestants', ContestantViewSet)
+router.register(r'parents', ParentViewSet)
 
 urlpatterns = router.urls
 
