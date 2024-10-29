@@ -32,8 +32,6 @@ ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1']
 # Application definition
 
 INSTALLED_APPS = [
-    # "unfold",
-    # 'admin_volt.apps.AdminVoltConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,13 +41,10 @@ INSTALLED_APPS = [
 
     'core',
     'register.apps.RegisterConfig',
-    'admin_dashboard.apps.AdminDashboardConfig',
     'scores.apps.ScoresConfig',
-    'judges.apps.JudgesConfig',
     'blog.apps.BlogConfig',
 
     'django_filters',
-    'widget_tweaks',
     'rest_framework',
     'corsheaders',
 ]
