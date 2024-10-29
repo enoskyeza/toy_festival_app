@@ -12,23 +12,23 @@ from .models import Payment, Parent, Contestant
 
 @admin.register(Parent)
 class ParentAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'address', 'proffession')
-    list_filter = ('proffession',)
+    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'address', 'profession')
+    list_filter = ('profession',)
     search_fields = ('first_name', 'last_name', 'email', 'phone_number')
     # Other customizations can be added here
 
 @admin.register(Contestant)
 class ContestantAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'age', 'gender', 'school', 'payment_status')
-    list_filter = ('gender', 'school', 'payment_status')
+    list_display = ('first_name', 'last_name', 'email', 'age', 'gender', 'school', 'payment_status','payment_method', 'age_category')
+    list_filter = ('gender', 'school', 'payment_status', 'payment_method', 'age_category')
     search_fields = ('first_name', 'last_name', 'email', 'school')
     # Other customizations can be added here
 
 @admin.register(Payment)
 class PaymentAdmin(admin.ModelAdmin):
-    list_display = ('pay_type', 'pay_status')
-    list_filter = ('pay_type', 'pay_status')
-    search_fields = ('pay_type',)
+    list_display = ['payment_method']
+    list_filter = ['payment_method']
+    search_fields = ['payment_method']
     # Other customizations can be added here
 
 # Multiple Register.

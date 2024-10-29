@@ -1,3 +1,6 @@
+from django.shortcuts import get_object_or_404
+
+from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import Payment, Contestant, Parent
 
@@ -22,19 +25,19 @@ class ContestantSerializer(serializers.ModelSerializer):
             'school', 'payment_status', 'payment_method', 'parent', 'age_category'
         ]
         extra_kwargs = {
-            'age': {'min_value': 3, 'max_value': 17},
+            'age': {
+                'min_value': 3,
+                'max_value': 17,
+                'error_messages': {
+                    'min_value': 'Age cannot be less than 3.',
+                    'max_value': 'Age cannot be greater than 17.'
+                }
+            },
         }
-
-        def validate(self, data):
-            # Custom validation, if needed
-            age = data.get('age')
-            if age and not (3 <= age <= 17):
-                raise serializers.ValidationError("Age must be between 3 and 17.")
-            return data
 
 
 class ParentSerializer(serializers.ModelSerializer):
-    contestant = ContestantSerializer(many=True, read_only=True)
+    contestants = ContestantSerializer(many=True, read_only=True)
 
     class Meta:
         model = Parent
@@ -54,8 +57,20 @@ class ParentCreateUpdateSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         contestants_data = validated_data.pop('contestants', [])
         parent = Parent.objects.create(**validated_data)
+
         for contestant_data in contestants_data:
+            payment_data = contestant_data.pop('payment_method', None)
+
+            if payment_data:
+                try:
+                    payment_instance = get_object_or_404(Payment, payment_method=payment_data.get('payment_method'))
+                except ValidationError:
+                    raise ValidationError({"payment_method": "The specified payment method does not exist."})
+
+                contestant_data['payment_method'] = payment_instance
+
             Contestant.objects.create(parent=parent, **contestant_data)
+
         return parent
 
     def update(self, instance, validated_data):
@@ -68,7 +83,18 @@ class ParentCreateUpdateSerializer(serializers.ModelSerializer):
 
         # Update or create Contestants
         for contestant_data in contestants_data:
+            payment_data = contestant_data.pop('payment_method', None)
+
+            if payment_data:
+                try:
+                    payment_instance = get_object_or_404(Payment, payment_method=payment_data.get('payment_method'))
+                except ValidationError:
+                    raise ValidationError({"payment_method": "The specified payment method does not exist."})
+
+                contestant_data['payment_method'] = payment_instance
+
             contestant_id = contestant_data.get('id')
+
             if contestant_id:
                 # Update existing Contestant
                 contestant = Contestant.objects.get(id=contestant_id, parent=instance)
