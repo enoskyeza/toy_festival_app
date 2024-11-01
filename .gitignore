@@ -95,5 +95,19 @@ db.sqlite3
 
 venv
 
-migrations/
 media/
+
+#Ignore only the miraition files
+migrations/*
+
+# Do not ignore the migrations directory itself
+!migrations/
+
+# Keep the __init__.py file
+!migrations/__init__.py
+
+# Ignore migration files starting with 00 (e.g., 0001_initial.py, 0002_auto.py, etc.)
+migrations/00*.py
+
+# Ignore cache files in the migrations directory
+migrations/__pycache__/
