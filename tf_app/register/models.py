@@ -86,13 +86,14 @@ class Contestant(BaseModel):
 class Parent(BaseModel):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    profession = models.CharField(max_length=100)
+    profession = models.CharField(max_length=100, null=True, blank=True)
     address = models.CharField(max_length=100)
 
     # Email & Number Validator if they are required fields
     email = models.EmailField(
         max_length=254,
-        validators=[EmailValidator(message="Invalid email address")]
+        validators=[EmailValidator(message="Invalid email address")],
+        null=True, blank=True
     )
     phone_number = models.CharField(
         max_length=13,
