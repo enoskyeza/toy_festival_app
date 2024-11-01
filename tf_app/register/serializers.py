@@ -15,6 +15,7 @@ class ContestantSerializer(serializers.ModelSerializer):
     # Read-only fields generated based on logic in the model's save method.
     identifier = serializers.CharField(read_only=True)
     age_category = serializers.CharField(read_only=True)
+    parent = serializers.SerializerMethodField()
 
     payment_method = PaymentSerializer()
 
@@ -34,6 +35,13 @@ class ContestantSerializer(serializers.ModelSerializer):
                 }
             },
         }
+
+    def get_parent(self, obj):
+        # Replace this with how you want to represent the parent as a string.
+        # For example, you could use the parent's first and last name:
+        if obj.parent:
+            return f"{obj.parent.first_name} {obj.parent.last_name}"
+        return "No parent assigned"
 
 
 class ParentSerializer(serializers.ModelSerializer):

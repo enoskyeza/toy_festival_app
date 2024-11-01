@@ -35,10 +35,10 @@ class Contestant(BaseModel):
     identifier = models.CharField(max_length=15, unique=True, blank=True, null=True)
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    email = models.EmailField(max_length=254, blank=True)
+    email = models.EmailField(max_length=254, blank=True, null=True)
     age = models.IntegerField()
     gender = models.CharField(max_length=1, choices=ContestantGender.choices)
-    school = models.CharField(max_length=100)
+    school = models.CharField(max_length=100, blank=True, null=True)
     payment_status = models.CharField(max_length=15, choices=PaymentStatus.choices, default=PaymentStatus.NOT_PAID)
     payment_method = models.ForeignKey('Payment', on_delete=models.SET_NULL, blank=True, null=True)
     parent = models.ForeignKey('Parent', on_delete=models.SET_NULL,blank=True, null=True, related_name='contestants')
@@ -63,20 +63,30 @@ class Contestant(BaseModel):
         else:
             self.age_category = None
 
-
     def save(self, *args, **kwargs):
-        if not self.pk and not self.identifier:
-            super().save(*args, **kwargs)  # Save to generate an ID
-
+        if self.payment_status == 'paid' and not self.identifier:
             current_year = datetime.now().year % 100
             self.identifier = f'TF{current_year}{self.id:03d}'
-
-            if self.identifier is not None:
-                self.set_age_category()
-                self.save()  # Save again to store the identifier
+            self.set_age_category()
+            super().save(*args, **kwargs)
         else:
             self.set_age_category()
             super().save(*args, **kwargs)
+
+
+    # def save(self, *args, **kwargs):
+    #     if not self.pk and not self.identifier:
+    #         super().save(*args, **kwargs)  # Save to generate an ID
+    #
+    #         current_year = datetime.now().year % 100
+    #         self.identifier = f'TF{current_year}{self.id:03d}'
+    #
+    #         if self.identifier is not None:
+    #             self.set_age_category()
+    #             self.save()  # Save again to store the identifier
+    #     else:
+    #         self.set_age_category()
+    #         super().save(*args, **kwargs)
 
 
     def __str__(self):
@@ -86,13 +96,14 @@ class Contestant(BaseModel):
 class Parent(BaseModel):
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
-    profession = models.CharField(max_length=100)
+    profession = models.CharField(max_length=100, null=True, blank=True)
     address = models.CharField(max_length=100)
 
     # Email & Number Validator if they are required fields
     email = models.EmailField(
         max_length=254,
-        validators=[EmailValidator(message="Invalid email address")]
+        validators=[EmailValidator(message="Invalid email address")],
+        null=True, blank=True
     )
     phone_number = models.CharField(
         max_length=13,
