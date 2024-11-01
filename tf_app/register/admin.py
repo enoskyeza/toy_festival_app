@@ -19,7 +19,7 @@ class ParentAdmin(admin.ModelAdmin):
 
 @admin.register(Contestant)
 class ContestantAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'age', 'gender', 'school', 'payment_status','payment_method', 'age_category')
+    list_display = ('identifier','first_name', 'last_name', 'email', 'age', 'gender', 'school', 'payment_status','payment_method', 'age_category')
     list_filter = ('gender', 'school', 'payment_status', 'payment_method', 'age_category')
     search_fields = ('first_name', 'last_name', 'email', 'school')
     # Other customizations can be added here

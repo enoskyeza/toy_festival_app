@@ -63,20 +63,30 @@ class Contestant(BaseModel):
         else:
             self.age_category = None
 
-
     def save(self, *args, **kwargs):
-        if not self.pk and not self.identifier:
-            super().save(*args, **kwargs)  # Save to generate an ID
-
+        if self.payment_status == 'paid' and not self.identifier:
             current_year = datetime.now().year % 100
             self.identifier = f'TF{current_year}{self.id:03d}'
-
-            if self.identifier is not None:
-                self.set_age_category()
-                self.save()  # Save again to store the identifier
+            self.set_age_category()
+            super().save(*args, **kwargs)
         else:
             self.set_age_category()
             super().save(*args, **kwargs)
+
+
+    # def save(self, *args, **kwargs):
+    #     if not self.pk and not self.identifier:
+    #         super().save(*args, **kwargs)  # Save to generate an ID
+    #
+    #         current_year = datetime.now().year % 100
+    #         self.identifier = f'TF{current_year}{self.id:03d}'
+    #
+    #         if self.identifier is not None:
+    #             self.set_age_category()
+    #             self.save()  # Save again to store the identifier
+    #     else:
+    #         self.set_age_category()
+    #         super().save(*args, **kwargs)
 
 
     def __str__(self):
