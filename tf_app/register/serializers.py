@@ -27,10 +27,10 @@ class ContestantSerializer(serializers.ModelSerializer):
         extra_kwargs = {
             'age': {
                 'min_value': 3,
-                'max_value': 17,
+                'max_value': 19,
                 'error_messages': {
                     'min_value': 'Age cannot be less than 3.',
-                    'max_value': 'Age cannot be greater than 17.'
+                    'max_value': 'Age cannot be greater than 19.'
                 }
             },
         }
