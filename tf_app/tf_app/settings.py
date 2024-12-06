@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-m7*dt2l=s-7=@!m#=5=ei#^xs2n%s&)o0#a4cctw6^@859-d7x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1']
+ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1',]
 
 
 # Application definition
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     'django_filters',
     'rest_framework',
+    'rest_framework.authtoken',
     'corsheaders',
 ]
 
@@ -152,12 +153,23 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # settings.py
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
+# REST_FRAMEWORK = {
+#     # Use Django's standard `django.contrib.auth` permissions,
+#     # or allow read-only access for unauthenticated users.
+#     'DEFAULT_PERMISSION_CLASSES': [
+#         'rest_framework.authentication.TokenAuthentication',
+#         'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
+#     ]
+# }
+
 REST_FRAMEWORK = {
-    # Use Django's standard `django.contrib.auth` permissions,
-    # or allow read-only access for unauthenticated users.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
     'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.DjangoModelPermissionsOrAnonReadOnly'
-    ]
+        'rest_framework.permissions.IsAuthenticated',
+    ],
 }
 
 AUTH_USER_MODEL = 'accounts.User'
