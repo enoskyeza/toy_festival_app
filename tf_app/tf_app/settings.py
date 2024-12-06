@@ -26,7 +26,10 @@ SECRET_KEY = 'django-insecure-m7*dt2l=s-7=@!m#=5=ei#^xs2n%s&)o0#a4cctw6^@859-d7x
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1',]
+# ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', '127.0.0.1',]
+
+ALLOWED_HOSTS = ['kyeza.pythonanywhere.com', 'app.wokober.com', 'woko-app.netlify.app', 'localhost', '127.0.0.1']
+
 
 
 # Application definition
@@ -64,7 +67,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# CORS_ORIGIN_ALLOW_ALL = True  # Allow requests from any origin
+CORS_ORIGIN_ALLOW_ALL = False  # Dont allow requests from any origin
 
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
