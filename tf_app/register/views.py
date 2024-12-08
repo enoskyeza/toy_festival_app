@@ -1,8 +1,8 @@
 from rest_framework import viewsets
 from rest_framework.permissions import AllowAny
 
-from .serializers import PaymentSerializer, ContestantSerializer, ParentSerializer, ParentCreateUpdateSerializer
-from .models import Parent, Contestant, Payment
+from .serializers import PaymentSerializer, ContestantSerializer, ParentSerializer, ParentCreateUpdateSerializer, TicketSerializer
+from .models import Parent, Contestant, Payment, Ticket
 # from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
 
 # API VIEWS.
@@ -31,6 +31,20 @@ class ParentViewSet(viewsets.ModelViewSet):
         return ParentSerializer
 
 
+class TicketViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A viewset for retrieving tickets.
+    """
+    queryset = Ticket.objects.select_related('participant')  # Optimize query with related participant
+    serializer_class = TicketSerializer
+    permission_classes = [AllowAny]
+
+    # def get_queryset(self):
+    #     """
+    #     Optionally filter tickets based on the current user.
+    #     """
+    #     # Filter by a specific participant if needed (e.g., based on user context or request data)
+    #     return super().get_queryset()
 
 
 
