@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Payment, Parent, Contestant
+from .models import Payment, Parent, Contestant, Ticket
 
 
 # Individual Register normal.
@@ -37,3 +37,8 @@ class PaymentAdmin(admin.ModelAdmin):
 
 # for model in models_to_register:
 #     admin.site.register(Parent)
+
+
+@admin.register(Ticket)
+class TicketAdmin(admin.ModelAdmin):
+    list_display = ('participant', 'created_at', 'qr_code')
