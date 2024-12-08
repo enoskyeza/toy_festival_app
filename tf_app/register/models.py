@@ -1,7 +1,14 @@
+import os
+from django.conf import settings
+from io import BytesIO
+from django.core.files import File
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
 from datetime import datetime
+
+import qrcode
+from PIL import Image
 
 from core.models import BaseModel
 
@@ -112,3 +119,41 @@ class Parent(BaseModel):
 
     def __str__(self):
         return f'{self.first_name} {self.last_name}'
+
+
+class Ticket(BaseModel):
+    participant = models.OneToOneField(
+        'register.Contestant',  # Replace with your actual Participant model's app name
+        on_delete=models.CASCADE,
+        related_name='ticket'
+    )
+    qr_code = models.ImageField(upload_to='tickets/qrcodes/', blank=True, null=True)
+
+    def create_qr_code(self):
+        """Generates a QR code for the participant."""
+        if not self.participant:
+            raise ValueError("Cannot create QR code: Ticket is not linked to a participant.")
+
+        # Generate the QR code data
+        qr_data = f"https://app.wokober.com/verify/{self.participant.id}"
+
+        # Create the QR code image
+        qr_image = qrcode.make(qr_data)
+
+        # Save the QR code to an in-memory file
+        qr_io = BytesIO()
+        qr_image.save(qr_io, format='PNG')
+        qr_io.seek(0)
+
+        # Save the in-memory file to the qr_code field
+        filename = f"participant_{self.participant.id}_qrcode.png"
+        self.qr_code.save(filename, File(qr_io), save=False)
+
+    def save(self, *args, **kwargs):
+        """Override save to automatically generate QR code if not already created."""
+        if not self.qr_code:
+            self.create_qr_code()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Ticket-#{self.participant.id}"
