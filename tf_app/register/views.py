@@ -14,7 +14,7 @@ class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
 
 # Viewset for Contestant
 class ContestantViewSet(viewsets.ModelViewSet):
-    queryset = Contestant.objects.select_related('payment_method', 'parent').all()
+    queryset = Contestant.objects.select_related('payment_method', 'parent').prefetch_related('scores')
     serializer_class = ContestantSerializer
     permission_classes = [AllowAny]
 

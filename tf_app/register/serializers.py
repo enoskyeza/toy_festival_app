@@ -3,6 +3,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import Payment, Contestant, Parent, Ticket
+from scores.serializers import ScoreSerializer
 
 
 class PaymentSerializer(serializers.ModelSerializer):
@@ -15,6 +16,7 @@ class ContestantSerializer(serializers.ModelSerializer):
     identifier = serializers.CharField(read_only=True)
     age_category = serializers.CharField(read_only=True)
     parent_name = serializers.SerializerMethodField()
+    scores = ScoreSerializer(many=True, read_only=True)
 
     payment_method = PaymentSerializer()
 
@@ -22,7 +24,7 @@ class ContestantSerializer(serializers.ModelSerializer):
         model = Contestant
         fields = [
             'id', 'identifier', 'first_name', 'last_name', 'email', 'age', 'gender',
-            'school', 'payment_status', 'payment_method', 'parent', 'parent_name', 'age_category', 'has_scores'
+            'school', 'payment_status', 'payment_method', 'parent', 'parent_name', 'age_category', 'scores'
         ]
         extra_kwargs = {
             'age': {
