@@ -102,14 +102,22 @@ class BulkScoreView(views.APIView):
 
             with transaction.atomic():
                 for item in serializer.validated_data:
-                    if 'id' in item:
-                        try:
-                            score_instance = Score.objects.get(id=item['id'])
-                            updated.append(BulkScoreSerializer().update(score_instance, item))
-                        except Score.DoesNotExist:
-                            raise serializers.ValidationError(f"Score with id {item['id']} does not exist.")
+                    # Check if a matching record exists
+                    existing_score = Score.objects.filter(
+                        judge_id=item['judge'],
+                        contestant_id=item['contestant'],
+                        criteria_id=item['criteria']
+                    ).first()
+
+                    if existing_score:
+                        # Update the existing record
+                        for field, value in item.items():
+                            setattr(existing_score, field, value)
+                        existing_score.save()
+                        updated.append(existing_score)
                     else:
-                        created.append(BulkScoreSerializer().create(item))
+                        # Create a new record
+                        created.append(Score.objects.create(**item))
 
             return Response({
                 "created": [score.id for score in created],
