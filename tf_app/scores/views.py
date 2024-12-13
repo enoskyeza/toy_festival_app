@@ -1,3 +1,191 @@
+from django.db.models import Value
+from django.db.models.functions import Concat
+from django.db import transaction
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import viewsets, status,  views
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated, AllowAny
+
+from register.models import Contestant
+from .models import MainCategory, JudgingCriteria, Score, JudgeComment
+from .serializers import (
+    MainCategorySerializer,
+    JudgingCriteriaSerializer,
+    ScoreSerializer,
+    JudgeCommentSerializer,
+    ContestantDetailSerializer,
+    BulkScoreSerializer,
+)
+
+class MainCategoryViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for retrieving main categories.
+    """
+    queryset = MainCategory.objects.all()
+    serializer_class = MainCategorySerializer
+    permission_classes = [AllowAny]
+
+
+class JudgingCriteriaViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    ViewSet for retrieving judging criteria.
+    """
+    queryset = JudgingCriteria.objects.select_related('category').all()
+    serializer_class = JudgingCriteriaSerializer
+    permission_classes = [AllowAny]
+
+
+class ScoreListAPIView(APIView):
+    """
+    Custom API view to fetch scores with optimized queries and include judge, contestant, and criteria fields.
+    """
+    def get(self, request, *args, **kwargs):
+        # Optimize the queryset by using select_related for judge, contestant, and criteria
+        scores = Score.objects.select_related('judge', 'contestant', 'criteria').all()
+
+        # Serialize the queryset with the ScoreSerializer
+        serializer = ScoreSerializer(scores, many=True)
+
+        # Return the response with serialized data
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class ScoreViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing scores.
+    """
+    queryset = Score.objects.select_related(
+        'judge',        # Fetch related Judge object
+        'contestant',   # Fetch related Contestant object
+        'criteria'      # Fetch related JudgingCriteria object (no main_category)
+    )
+
+    serializer_class = ScoreSerializer
+    permission_classes = [AllowAny]
+
+
+# class BulkScoreView(views.APIView):
+#     permission_classes = [AllowAny]
+
+#     def post(self, request):
+#         serializer = BulkScoreSerializer(data=request.data, many=True)
+#         if serializer.is_valid():
+#             created, updated = [], []
+
+#             with transaction.atomic():
+#                 for item in serializer.validated_data:
+#                     if 'id' in item:
+#                         try:
+#                             score_instance = Score.objects.get(id=item['id'])
+#                             updated.append(BulkScoreSerializer().update(score_instance, item))
+#                         except Score.DoesNotExist:
+#                             raise serializers.ValidationError(f"Score with id {item['id']} does not exist.")
+#                     else:
+#                         created.append(BulkScoreSerializer().create(item))
+
+#             return Response({
+#                 "created": [score.id for score in created],
+#                 "updated": [score.id for score in updated],
+#             }, status=status.HTTP_200_OK)
+
+#         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class BulkScoreView(views.APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        serializer = BulkScoreSerializer(data=request.data, many=True)
+        if serializer.is_valid():
+            created, updated = [], []
+
+            with transaction.atomic():
+                for item in serializer.validated_data:
+                    if 'id' in item:
+                        try:
+                            score_instance = Score.objects.get(id=item['id'])
+                            updated.append(BulkScoreSerializer().update(score_instance, item))
+                        except Score.DoesNotExist:
+                            raise serializers.ValidationError(f"Score with id {item['id']} does not exist.")
+                    else:
+                        created.append(BulkScoreSerializer().create(item))
+
+            return Response({
+                "created": [score.id for score in created],
+                "updated": [score.id for score in updated],
+            }, status=status.HTTP_200_OK)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ScoreReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Score.objects.select_related(
+        'judge',        # Fetch related Judge object
+        'contestant',   # Fetch related Contestant object
+        'criteria'      # Fetch related JudgingCriteria object (no main_category)
+    )
+    serializer_class = ScoreSerializer
+
+    def get_queryset(self):
+        """
+        Filter scores based on judge if they are not an admin.
+        """
+        user = self.request.user
+        if user.role != "admin":  # Assuming `role` is a field in the user model
+            return self.queryset.filter(judge=user)
+        return self.queryset
+
+
+class JudgeCommentViewSet(viewsets.ModelViewSet):
+    """
+    ViewSet for managing judge comments.
+    """
+    queryset = JudgeComment.objects.select_related(
+        'judge',        # Fetch related Judge object
+        'contestant'    # Fetch related Contestant object
+    ).all()
+    serializer_class = JudgeCommentSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        """
+        Filter comments based on judge if they are not an admin.
+        """
+        user = self.request.user
+        if user.role != "admin":  # Assuming `role` is a field in the user model
+            return self.queryset.filter(judge=user)
+        return self.queryset
+
+
+class ContestantDetailViewSet(viewsets.ReadOnlyModelViewSet):
+    """
+    A read-only viewset for fetching contestant details with related scores and comments.
+    """
+    queryset = Contestant.objects.prefetch_related('scores__criteria', 'scores__judge', 'comments__judge').all()
+    serializer_class = ContestantDetailSerializer
+    permission_classes = [AllowAny]
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 # from django.shortcuts import render, redirect, get_object_or_404
 # from django.contrib.auth.decorators import login_required
 # from django.db.models import Sum
