@@ -22,7 +22,7 @@ class ContestantSerializer(serializers.ModelSerializer):
         model = Contestant
         fields = [
             'id', 'identifier', 'first_name', 'last_name', 'email', 'age', 'gender',
-            'school', 'payment_status', 'payment_method', 'parent', 'parent_name', 'age_category'
+            'school', 'payment_status', 'payment_method', 'parent', 'parent_name', 'age_category', 'has_scores'
         ]
         extra_kwargs = {
             'age': {

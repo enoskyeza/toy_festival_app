@@ -80,6 +80,9 @@ class Contestant(BaseModel):
             self.set_age_category()
             super().save(*args, **kwargs)
 
+    def has_scores(self):
+        return self.scores.exists()
+
 
     # def save(self, *args, **kwargs):
     #     if not self.pk and not self.identifier:

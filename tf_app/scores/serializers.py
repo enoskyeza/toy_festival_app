@@ -63,15 +63,9 @@ class BulkScoreSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        validated_data['criteria'] = validated_data.pop('criteria')
-        validated_data['judge'] = validated_data.pop('judge')
-        validated_data['contestant'] = validated_data.pop('contestant')
         return Score.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        validated_data['criteria'] = validated_data.pop('criteria')
-        validated_data['judge'] = validated_data.pop('judge')
-        validated_data['contestant'] = validated_data.pop('contestant')
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
         instance.save()
@@ -100,6 +94,7 @@ class ScoreDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Score
         fields = ['id', 'judge', 'contestant', 'criteria', 'score']
+
 
 class ContestantDetailSerializer(serializers.ModelSerializer):
     scores = ScoreDetailSerializer(many=True, read_only=True)
