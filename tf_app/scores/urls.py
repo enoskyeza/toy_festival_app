@@ -1,16 +1,18 @@
-# from django.urls import path
-#
-# from . import views
-#
-# app_name = 'score'
-#
-# urlpatterns = [
-#     path('<int:contestant_id>', views.submit_score, name='submit-scores'),
-#     path('update/<int:contestant_id>', views.update_score, name='update-scores'),
-#     path('comment/<int:contestant_id>', views.judge_comment, name='comment'),
-#     path('details/<int:contestant_id>', views.contestant_scores, name='judge-scores'),
-#     path('event/', views.event_scores, name='event-scores'),
-#     path('overall/', views.overall_scores, name='overall-scores'),
-#
-#     # path('success', views.contestant_scores, name='success'),
-# ]
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import MainCategoryViewSet, JudgingCriteriaViewSet, ScoreViewSet, JudgeCommentViewSet, ScoreListAPIView, ScoreReadOnlyViewSet, ContestantDetailViewSet, BulkScoreView
+
+# Set up the router
+router = DefaultRouter()
+router.register(r'categories', MainCategoryViewSet, basename='maincategory')
+router.register(r'criteria', JudgingCriteriaViewSet, basename='criteria')
+router.register(r'scores', ScoreViewSet, basename='score')
+router.register(r'score-dets', ScoreReadOnlyViewSet, basename='dets')
+router.register(r'participant-dets', ContestantDetailViewSet, basename='participant-dets')
+router.register(r'comments', JudgeCommentViewSet, basename='judgecomment')
+
+# Include the router URLs
+urlpatterns = [
+    path('', include(router.urls)),
+    path('upload-scores/', BulkScoreView.as_view(), name='bulk_score_upload'),
+]
