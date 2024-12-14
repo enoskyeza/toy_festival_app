@@ -76,6 +76,7 @@ class JudgeManager(BaseUserManager):  # New JudgeManager
         results = super().get_queryset(*args, **kwargs)
         return results.filter(role=User.Role.JUDGE)
 
+
 class Judge(User):
     base_role = User.Role.JUDGE
 

@@ -1,14 +1,23 @@
 from django.db.models import Value
 from django.db.models.functions import Concat
 from django.db import transaction
+from django.db.models import Avg, Sum, Prefetch
+from django.http import JsonResponse
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import viewsets, status,  views
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.generics import ListAPIView
+
+from django_filters import rest_framework as filters
+from rest_framework.filters import OrderingFilter
+from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.pagination import PageNumberPagination
 
 from register.models import Contestant
+from accounts.models import Judge
 from .models import MainCategory, JudgingCriteria, Score, JudgeComment
 from .serializers import (
     MainCategorySerializer,
@@ -18,6 +27,11 @@ from .serializers import (
     ContestantDetailSerializer,
     BulkScoreSerializer,
 )
+
+class ResultsPagination(PageNumberPagination):
+    page_size = 20  # Number of contestants per page
+    page_size_query_param = 'page_size'
+    max_page_size = 50
 
 class MainCategoryViewSet(viewsets.ReadOnlyModelViewSet):
     """
@@ -128,21 +142,48 @@ class BulkScoreView(views.APIView):
 
 
 class ScoreReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+    permission_classes = [AllowAny]
     queryset = Score.objects.select_related(
         'judge',        # Fetch related Judge object
         'contestant',   # Fetch related Contestant object
-        'criteria'      # Fetch related JudgingCriteria object (no main_category)
+        'criteria'      # Fetch related JudgingCriteria object
     )
     serializer_class = ScoreSerializer
+    filter_backends = [DjangoFilterBackend, OrderingFilter]
+    filterset_fields = ['judge', 'contestant']
+    ordering_fields = ['criteria', 'score']
+    ordering = ['-score']
 
-    def get_queryset(self):
-        """
-        Filter scores based on judge if they are not an admin.
-        """
-        user = self.request.user
-        if user.role != "admin":  # Assuming `role` is a field in the user model
-            return self.queryset.filter(judge=user)
-        return self.queryset
+    # def get_queryset(self):
+    #     """
+    #     Filter scores based on judge if they are not an admin.
+    #     """
+    #     user = self.request.user
+    #     if user.role != "admin":  # Assuming `role` is a field in the user model
+    #         return self.queryset.filter(judge=user)
+    #     return self.queryset
+
+
+# class ScoreReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
+#     queryset = Score.objects.select_related(
+#         'judge',        # Fetch related Judge object
+#         'contestant',   # Fetch related Contestant object
+#         'criteria'      # Fetch related JudgingCriteria object (no main_category)
+#     )
+#     serializer_class = ScoreSerializer
+#     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+#     filterset_fields = ['judge', 'contestant']  # Define fields to filter by
+#     ordering_fields = ['criteria', 'score']    # Optional: Allow ordering
+#     ordering = ['-score']
+
+#     def get_queryset(self):
+#         """
+#         Filter scores based on judge if they are not an admin.
+#         """
+#         user = self.request.user
+#         if user.role != "admin":  # Assuming `role` is a field in the user model
+#             return self.queryset.filter(judge=user)
+#         return self.queryset
 
 
 class JudgeCommentViewSet(viewsets.ModelViewSet):
@@ -176,12 +217,365 @@ class ContestantDetailViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 
+class ResultsListView(ListAPIView):
+    """
+    API view to calculate and display contestant results with pagination and filtering.
+    """
+    permission_classes = [AllowAny]
+    pagination_class = ResultsPagination
+    queryset = Contestant.objects.filter(payment_status='paid').prefetch_related(
+        Prefetch(
+            'scores',
+            queryset=Score.objects.select_related('criteria', 'criteria__category', 'judge')
+        )
+    )
+    filter_backends = [DjangoFilterBackend]
+    filterset_fields = ['age_category', 'gender']
+
+    def list(self, request, *args, **kwargs):
+        contestants = self.filter_queryset(self.get_queryset())
+        paginated_contestants = self.paginate_queryset(contestants)
+
+        # Retrieve all judges
+        all_judges = Judge.objects.all()
+        judge_names = [judge.username for judge in all_judges]
+
+        # Prepare the result data
+        results = []
+
+        for contestant in paginated_contestants:
+            # Base contestant info
+            contestant_data = {
+                "name": f"{contestant.first_name} {contestant.last_name}",
+                "identifier": contestant.identifier,
+                "age": contestant.age,
+                "age_category": contestant.age_category,
+                "gender": contestant.gender,
+            }
+
+            # Group scores by category and criteria
+            categories = {}
+            scores = contestant.scores.all()
+
+            for score in scores:
+                category_name = score.criteria.category.name
+                criteria_name = score.criteria.name
+
+                if category_name not in categories:
+                    categories[category_name] = {"criteria": {}, "totals": {"judges": {}, "average": 0}}
+
+                if criteria_name not in categories[category_name]["criteria"]:
+                    categories[category_name]["criteria"][criteria_name] = {judge: 0 for judge in judge_names}
+
+                # Add the judge's score
+                categories[category_name]["criteria"][criteria_name][score.judge.username] = float(score.score)
+
+                # Add judge totals
+                if score.judge.username not in categories[category_name]["totals"]["judges"]:
+                    categories[category_name]["totals"]["judges"][score.judge.username] = 0
+                categories[category_name]["totals"]["judges"][score.judge.username] += float(score.score)
+
+            # Ensure all judges are represented with default scores
+            for category_name, data in categories.items():
+                for criteria_name, judge_scores in data["criteria"].items():
+                    for judge in judge_names:
+                        if judge not in judge_scores:
+                            judge_scores[judge] = 0
+
+                # Calculate averages for each criteria and category totals
+                category_total = 0
+                criteria_count = 0
+
+                for criteria_name, judge_scores in data["criteria"].items():
+                    avg_score = sum(judge_scores.values()) / len(judge_scores)
+                    data["criteria"][criteria_name] = {
+                        "judge_scores": judge_scores,
+                        "average": avg_score,
+                    }
+                    category_total += avg_score
+                    criteria_count += 1
+
+                # Total average for the category
+                if criteria_count > 0:
+                    data["totals"]["average"] = category_total / criteria_count
+
+            # Add overall total across categories
+            overall_total = sum(data["totals"]["average"] for data in categories.values())
+
+            # Update contestant data
+            contestant_data["categories"] = categories
+            contestant_data["overall_total"] = overall_total
+            results.append(contestant_data)
+
+        # Sort results by overall_total in descending order
+        sorted_results = sorted(results, key=lambda x: x["overall_total"], reverse=True)
+
+        return self.get_paginated_response(sorted_results)
+
+# class ResultsListView(ListAPIView):
+#     """
+#     API view to calculate and display contestant results with pagination and filtering.
+#     """
+#     permission_classes=[AllowAny]
+#     pagination_class = ResultsPagination
+#     queryset = Contestant.objects.filter(payment_status='paid').prefetch_related(
+#         Prefetch(
+#             'scores',
+#             queryset=Score.objects.select_related('criteria', 'criteria__category', 'judge')
+#         )
+#     )
+#     filter_backends = [DjangoFilterBackend]
+#     filterset_fields = ['age_category', 'gender']  # Enable filtering by age_category and gender
+
+#     def list(self, request, *args, **kwargs):
+#         contestants = self.filter_queryset(self.get_queryset())
+#         paginated_contestants = self.paginate_queryset(contestants)
+
+#         # Prepare the result data
+#         results = []
+
+#         for contestant in paginated_contestants:
+#             # Base contestant info
+#             contestant_data = {
+#                 "name": f"{contestant.first_name} {contestant.last_name}",
+#                 "identifier": contestant.identifier,
+#                 "age": contestant.age,
+#                 "age_category": contestant.age_category,
+#                 "gender": contestant.gender,
+#             }
+
+#             # Group scores by category and criteria
+#             categories = {}
+#             scores = contestant.scores.all()
+
+#             for score in scores:
+#                 category_name = score.criteria.category.name
+#                 criteria_name = score.criteria.name
+
+#                 if category_name not in categories:
+#                     categories[category_name] = {}
+
+#                 if criteria_name not in categories[category_name]:
+#                     categories[category_name][criteria_name] = []
+
+#                 # Add the judge's score and name to the criteria
+#                 categories[category_name][criteria_name].append({
+#                     "judge_name": score.judge.username,
+#                     "score": float(score.score)
+#                 })
+
+#             # Calculate averages for each criteria
+#             for category_name, criteria in categories.items():
+#                 for criteria_name, judge_scores in criteria.items():
+#                     avg_score = sum(judge["score"] for judge in judge_scores) / len(judge_scores)
+#                     categories[category_name][criteria_name] = {
+#                         "judge_scores": judge_scores,
+#                         "average": avg_score,
+#                     }
+
+#             # Add categories to contestant data
+#             contestant_data["categories"] = categories
+#             results.append(contestant_data)
+
+#         return self.get_paginated_response(results)
+
+
+
+class ResultsView(APIView):
+    """
+    API view to calculate and display contestant results.
+    """
+
+    def get(self, request, *args, **kwargs):
+        # Fetch only contestants with payment_status set to "paid"
+        contestants = Contestant.objects.filter(payment_status='paid')
+
+
+        # Prepare the result data
+        results = []
+
+        for contestant in contestants:
+            # Base contestant info
+            contestant_data = {
+                "name": f"{contestant.first_name} {contestant.last_name}",
+                "identifier": contestant.identifier,
+                "age": contestant.age,
+            }
+
+            # Group scores by category and criteria
+            categories = {}
+            scores = Score.objects.filter(contestant=contestant).select_related('criteria', 'criteria__category', 'judge')
+
+            for score in scores:
+                category_name = score.criteria.category.name
+                criteria_name = score.criteria.name
+
+                if category_name not in categories:
+                    categories[category_name] = {}
+
+                if criteria_name not in categories[category_name]:
+                    categories[category_name][criteria_name] = []
+
+                # Add the judge's score and name to the criteria
+                categories[category_name][criteria_name].append({
+                    "judge_name": score.judge.username,  # Assuming Judge model has a `username` field
+                    "score": float(score.score)
+                })
+
+            # Calculate averages for each criteria
+            for category_name, criteria in categories.items():
+                for criteria_name, judge_scores in criteria.items():
+                    avg_score = sum(judge["score"] for judge in judge_scores) / len(judge_scores)
+                    categories[category_name][criteria_name] = {
+                        "judge_scores": judge_scores,
+                        "average": avg_score,
+                    }
+
+            # Add categories to contestant data
+            contestant_data["categories"] = categories
+            results.append(contestant_data)
+
+        # Return results as a JSON response
+        return Response({"results": results})
+
+
+
+def results_view(request):
+    # Fetch all contestants
+    contestants = Contestant.objects.all()
+
+    # Prepare the result data
+    results = []
+
+    for contestant in contestants:
+        # Base contestant info
+        contestant_data = {
+            "name": f"{contestant.first_name} {contestant.last_name}",
+            "identifier": contestant.identifier,
+            "age": contestant.age,
+        }
+
+        # Group scores by category and criteria
+        categories = {}
+        scores = Score.objects.filter(contestant=contestant).select_related('criteria', 'criteria__category', 'judge')
+
+        for score in scores:
+            category_name = score.criteria.category.name
+            criteria_name = score.criteria.name
+
+            if category_name not in categories:
+                categories[category_name] = {}
+
+            if criteria_name not in categories[category_name]:
+                categories[category_name][criteria_name] = []
+
+            # Add the judge's score and name to the criteria
+            categories[category_name][criteria_name].append({
+                "judge_name": score.judge.username,  # Assuming Judge model has a `username` field
+                "score": float(score.score)
+            })
+
+        # Calculate averages for each criteria
+        for category_name, criteria in categories.items():
+            for criteria_name, judge_scores in criteria.items():
+                avg_score = sum(judge["score"] for judge in judge_scores) / len(judge_scores)
+                categories[category_name][criteria_name] = {
+                    "judge_scores": judge_scores,
+                    "average": avg_score,
+                }
+
+        # Add categories to contestant data
+        contestant_data["categories"] = categories
+        results.append(contestant_data)
+
+    return JsonResponse({"results": results}, safe=False)
 
 
 
 
 
 
+# def list(self, request, *args, **kwargs):
+#     contestants = self.filter_queryset(self.get_queryset())
+
+#     # Prepare the result data
+#     results = []
+
+#     # Retrieve all judges
+#     all_judges = Judge.objects.all()
+#     judge_names = [judge.username for judge in all_judges]
+
+#     for contestant in contestants:
+#         # Base contestant info
+#         contestant_data = {
+#             "name": f"{contestant.first_name} {contestant.last_name}",
+#             "identifier": contestant.identifier,
+#             "age": contestant.age,
+#             "age_category": contestant.age_category,
+#             "gender": contestant.gender,
+#         }
+
+#         # Group scores by category and criteria
+#         categories = {}
+#         scores = contestant.scores.all()
+
+#         for score in scores:
+#             category_name = score.criteria.category.name
+#             criteria_name = score.criteria.name
+
+#             if category_name not in categories:
+#                 categories[category_name] = {"criteria": {}, "totals": {"judges": {}, "average": 0}}
+
+#             if criteria_name not in categories[category_name]["criteria"]:
+#                 categories[category_name]["criteria"][criteria_name] = {judge: 0 for judge in judge_names}
+
+#             # Add the judge's score
+#             categories[category_name]["criteria"][criteria_name][score.judge.username] = float(score.score)
+
+#             # Add judge totals
+#             if score.judge.username not in categories[category_name]["totals"]["judges"]:
+#                 categories[category_name]["totals"]["judges"][score.judge.username] = 0
+#             categories[category_name]["totals"]["judges"][score.judge.username] += float(score.score)
+
+#         # Ensure all judges are represented with default scores
+#         for category_name, data in categories.items():
+#             for criteria_name, judge_scores in data["criteria"].items():
+#                 for judge in judge_names:
+#                     if judge not in judge_scores:
+#                         judge_scores[judge] = 0
+
+#             # Calculate averages for each criteria and category totals
+#             category_total = 0
+#             criteria_count = 0
+
+#             for criteria_name, judge_scores in data["criteria"].items():
+#                 avg_score = sum(judge_scores.values()) / len(judge_scores)
+#                 data["criteria"][criteria_name] = {
+#                     "judge_scores": judge_scores,
+#                     "average": avg_score,
+#                 }
+#                 category_total += avg_score
+#                 criteria_count += 1
+
+#             # Total average for the category
+#             if criteria_count > 0:
+#                 data["totals"]["average"] = category_total / criteria_count
+
+#         # Add overall total across categories
+#         overall_total = sum(data["totals"]["average"] for data in categories.values())
+
+#         # Update contestant data
+#         contestant_data["categories"] = categories
+#         contestant_data["overall_total"] = overall_total
+#         results.append(contestant_data)
+
+#     # Sort by overall total in descending order
+#     sorted_results = sorted(results, key=lambda x: x["overall_total"], reverse=True)
+
+#     # Paginate the sorted results
+#     paginated_results = self.paginate_queryset(sorted_results)
+
+#     return self.get_paginated_response(paginated_results)
 
 
 
