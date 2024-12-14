@@ -1,6 +1,6 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import MainCategoryViewSet, JudgingCriteriaViewSet, ScoreViewSet, JudgeCommentViewSet, ScoreListAPIView, ScoreReadOnlyViewSet, ContestantDetailViewSet, BulkScoreView
+from .views import MainCategoryViewSet, JudgingCriteriaViewSet, ScoreViewSet, JudgeCommentViewSet, ScoreListAPIView, ScoreReadOnlyViewSet, ContestantDetailViewSet, BulkScoreView, ResultsView, ResultsListView
 
 # Set up the router
 router = DefaultRouter()
@@ -15,4 +15,6 @@ router.register(r'comments', JudgeCommentViewSet, basename='judgecomment')
 urlpatterns = [
     path('', include(router.urls)),
     path('upload-scores/', BulkScoreView.as_view(), name='bulk_score_upload'),
+    path('results/', ResultsListView.as_view(), name='opt-results'),
+    path('result/', ResultsView.as_view(), name='results'),
 ]
