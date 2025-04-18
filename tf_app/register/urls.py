@@ -1,5 +1,10 @@
+from django.urls import path, include
 from rest_framework import routers
-from .views import PaymentViewSet, ContestantViewSet, ParentViewSet, TicketViewSet
+from .views import (
+    PaymentViewSet, ContestantViewSet, ParentViewSet, TicketViewSet,
+    SchoolViewSet, GuardianViewSet,ParticipantViewSet, ProgramTypeViewSet,
+    ProgramViewSet, RegistrationViewSet, SelfRegistrationAPIView
+)
 
 router = routers.DefaultRouter()
 router.register(r'payments', PaymentViewSet)
@@ -7,7 +12,18 @@ router.register(r'contestants', ContestantViewSet)
 router.register(r'parents', ParentViewSet)
 router.register(r'tickets', TicketViewSet)
 
-urlpatterns = router.urls
+router.register(r'schools', SchoolViewSet)
+router.register(r'guardians', GuardianViewSet)
+router.register(r'participants', ParticipantViewSet)
+router.register(r'programs', ProgramViewSet)
+router.register(r'registrations', RegistrationViewSet)
+
+
+
+urlpatterns = [
+    path('self-register/', SelfRegistrationAPIView.as_view(), name='self-register'),
+    path('', include(router.urls)),
+]
 
 
 
