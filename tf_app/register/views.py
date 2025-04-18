@@ -1,8 +1,23 @@
 from rest_framework import viewsets
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
 
-from .serializers import PaymentSerializer, ContestantSerializer, ParentSerializer, ParentCreateUpdateSerializer, TicketSerializer
-from .models import Parent, Contestant, Payment, Ticket
+from .serializers import (
+    PaymentSerializer, ContestantSerializer, ParentSerializer,
+    ParentCreateUpdateSerializer, TicketSerializer, SchoolSerializer,
+    GuardianSerializer,
+    ParticipantSerializer,
+    ProgramTypeSerializer,
+    ProgramSerializer,
+    RegistrationSerializer,
+    SelfRegistrationSerializer
+)
+from .models import (
+    Parent, Contestant, Payment, Ticket,  School, Guardian,
+    Participant, ProgramType, Program, Registration
+)
 # from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
 
 # API VIEWS.
@@ -17,7 +32,6 @@ class ContestantViewSet(viewsets.ModelViewSet):
     queryset = Contestant.objects.select_related('payment_method', 'parent').prefetch_related('scores')
     serializer_class = ContestantSerializer
     permission_classes = [AllowAny]
-
 
 
 # Viewset for Parent
@@ -47,7 +61,62 @@ class TicketViewSet(viewsets.ReadOnlyModelViewSet):
     #     return super().get_queryset()
 
 
+# NEW ARCHITECTURE
+class SchoolViewSet(viewsets.ModelViewSet):
+    """CRUD for schools"""
+    queryset = School.objects.all().order_by('name')
+    serializer_class = SchoolSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
 
+
+class GuardianViewSet(viewsets.ModelViewSet):
+    """CRUD for guardians"""
+    queryset = Guardian.objects.all().order_by('last_name', 'first_name')
+    serializer_class = GuardianSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class ParticipantViewSet(viewsets.ModelViewSet):
+    """CRUD for participants"""
+    queryset = Participant.objects.all().order_by('last_name', 'first_name')
+    serializer_class = ParticipantSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class ProgramTypeViewSet(viewsets.ModelViewSet):
+    """CRUD for programs"""
+    queryset = ProgramType.objects.all().order_by('name')
+    serializer_class = ProgramSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class ProgramViewSet(viewsets.ModelViewSet):
+    """CRUD for programs"""
+    queryset = Program.objects.all().order_by('name')
+    serializer_class = ProgramSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class RegistrationViewSet(viewsets.ModelViewSet):
+    """CRUD for registrations"""
+    queryset = Registration.objects.all().order_by('-created_at')
+    serializer_class = RegistrationSerializer
+    permission_classes = [IsAuthenticatedOrReadOnly]
+
+
+class SelfRegistrationAPIView(APIView):
+    """
+    Public endpoint allowing a guardian to register one or more
+    participants for a program in one go.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request, *args, **kwargs):
+        serializer = SelfRegistrationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        registrations = serializer.save()
+        output = RegistrationSerializer(registrations, many=True).data
+        return Response(output, status=status.HTTP_201_CREATED)
 
 # DJANGO TEMPLATES VIEWS
 # def home(request):
