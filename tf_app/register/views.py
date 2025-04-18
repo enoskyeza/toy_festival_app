@@ -104,19 +104,30 @@ class RegistrationViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticatedOrReadOnly]
 
 
+
 class SelfRegistrationAPIView(APIView):
-    """
-    Public endpoint allowing a guardian to register one or more
-    participants for a program in one go.
-    """
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
         serializer = SelfRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
-        registrations = serializer.save()
-        output = RegistrationSerializer(registrations, many=True).data
-        return Response(output, status=status.HTTP_201_CREATED)
+        result = serializer.save()
+        return Response(result, status=status.HTTP_201_CREATED)
+
+
+# class SelfRegistrationAPIView(APIView):
+#     """
+#     Public endpoint allowing a guardian to register one or more
+#     participants for a program in one go.
+#     """
+#     permission_classes = [AllowAny]
+#
+#     def post(self, request, *args, **kwargs):
+#         serializer = SelfRegistrationSerializer(data=request.data)
+#         serializer.is_valid(raise_exception=True)
+#         registrations = serializer.save()
+#         output = RegistrationSerializer(registrations, many=True).data
+#         return Response(output, status=status.HTTP_201_CREATED)
 
 # DJANGO TEMPLATES VIEWS
 # def home(request):

@@ -16,9 +16,10 @@ from .models import (
 
 @admin.register(Parent)
 class ParentAdmin(admin.ModelAdmin):
-    list_display = ('first_name', 'last_name', 'email', 'phone_number', 'address', 'profession')
+    list_display = ('id', 'first_name', 'last_name', 'email', 'phone_number', 'address', 'profession')
     list_filter = ('profession',)
     search_fields = ('first_name', 'last_name', 'email', 'phone_number')
+
     # Other customizations can be added here
 
 @admin.register(Contestant)
@@ -59,6 +60,7 @@ class SchoolAdmin(admin.ModelAdmin):
 class GuardianAdmin(admin.ModelAdmin):
     list_display = ('id', 'first_name', 'last_name', 'email', 'phone_number')
     search_fields = ('first_name', 'last_name', 'email')
+    ordering = ('-created_at', )
 
 
 @admin.register(Participant)
@@ -66,7 +68,7 @@ class ParticipantAdmin(admin.ModelAdmin):
     list_display = ('id', 'first_name', 'last_name', 'gender', 'date_of_birth', 'current_school')
     search_fields = ('first_name', 'last_name', 'email')
     list_filter = ('gender', 'current_school')
-    ordering = ('id', )
+    ordering = ('-created_at', )
 
 
 @admin.register(ParticipantGuardian)
@@ -74,6 +76,7 @@ class ParticipantGuardianAdmin(admin.ModelAdmin):
     list_display = ('participant', 'guardian', 'relationship', 'is_primary')
     list_filter = ('relationship', 'is_primary')
     search_fields = ('participant__first_name', 'participant__last_name', 'guardian__first_name', 'guardian__last_name')
+    ordering = ('id', )
 
 
 
@@ -95,6 +98,7 @@ class RegistrationAdmin(admin.ModelAdmin):
     list_display = ('id', 'participant', 'program', 'status', 'age_at_registration')
     search_fields = ('participant__first_name', 'participant__last_name', 'program__name')
     list_filter = ('status', 'program')
+    ordering = ('-created_at', )
 
 
 @admin.register(Receipt)
@@ -102,12 +106,14 @@ class ReceiptAdmin(admin.ModelAdmin):
     list_display = ('id', 'registration', 'issued_by', 'amount', 'status')
     search_fields = ('registration__participant__first_name', 'registration__participant__last_name')
     list_filter = ('status',)
+    ordering = ('-created_at', )
 
 
 @admin.register(Coupon)
 class CouponAdmin(admin.ModelAdmin):
     list_display = ('id', 'registration', 'status')
     list_filter = ('status',)
+    ordering = ('-created_at', )
 
 
 @admin.register(Approval)
@@ -115,4 +121,5 @@ class ApprovalAdmin(admin.ModelAdmin):
     list_display = ('id', 'registration', 'status', 'created_by', 'receipt', 'coupon')
     list_filter = ('status',)
     search_fields = ('registration__participant__first_name', 'registration__participant__last_name')
+    ordering = ('-created_at', )
 

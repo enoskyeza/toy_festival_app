@@ -229,7 +229,7 @@ class Participant(BaseModel):
     first_name     = models.CharField(max_length=100)
     last_name      = models.CharField(max_length=100)
     email          = models.EmailField(max_length=254, blank=True, null=True)
-    date_of_birth  = models.DateField()
+    date_of_birth  = models.DateField(blank=True, null=True)
     age = models.IntegerField()
     gender         = models.CharField(max_length=1, choices=Gender.choices)
     current_school = models.ForeignKey(
