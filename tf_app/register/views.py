@@ -173,11 +173,8 @@ class SelfRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
-        print('VIEW HIT')
         serializer = SelfRegistrationSerializer(data=request.data)
-        print('SERIALIZER IN VIEW HIT')
         serializer.is_valid(raise_exception=True)
-        print('SERIALIZER VALIDATION FINISHED')
         result = serializer.save()
         return Response(result, status=status.HTTP_201_CREATED)
 

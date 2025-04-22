@@ -176,23 +176,18 @@ class ProgramSerializer(serializers.ModelSerializer):
                   'registration_fee', 'age_min', 'age_max', 'capacity', 'requires_ticket']
 
 
+class MiniParticipantSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Participant
+        fields = [
+            'id', 'first_name', 'last_name', 'gender'
+        ]
+
 class RegistrationSerializer(serializers.ModelSerializer):
-    participant = serializers.PrimaryKeyRelatedField(
-        queryset=Participant.objects.all()
-    )
-    program = serializers.PrimaryKeyRelatedField(
-        queryset=Program.objects.all()
-    )
-    school_at_registration = serializers.PrimaryKeyRelatedField(
-        queryset=School.objects.all(),
-        allow_null=True,
-        required=False
-    )
-    guardian_at_registration = serializers.PrimaryKeyRelatedField(
-        queryset=Guardian.objects.all(),
-        allow_null=True,
-        required=False
-    )
+    participant = MiniParticipantSerializer(read_only=True)
+    program = serializers.StringRelatedField(read_only=True)
+    school_at_registration = serializers.StringRelatedField(read_only=True)
+    guardian_at_registration = serializers.StringRelatedField(read_only=True)
 
     class Meta:
         model = Registration
@@ -242,7 +237,6 @@ class ParticipantInputSerializer(serializers.Serializer):
 
 
 class SelfRegistrationSerializer(serializers.Serializer):
-    print('SERIALIZER HIT')
     program = serializers.PrimaryKeyRelatedField(queryset=Program.objects.all())
     guardian = GuardianInputSerializer()
     participants = ParticipantInputSerializer(many=True)
@@ -260,7 +254,6 @@ class SelfRegistrationSerializer(serializers.Serializer):
             return today.replace(year=today.year - age, day=28)
 
     def get_or_create_school(self, data: dict) -> School:
-        print('SERIALIZER SCHOOL METHOD HIT')
         id_ = data.get('id')
         print('ID: ', id_)
         if id_:
