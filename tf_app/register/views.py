@@ -1,4 +1,6 @@
-from rest_framework import viewsets
+from django_filters.rest_framework import DjangoFilterBackend
+
+from rest_framework import viewsets, filters
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -12,13 +14,21 @@ from .serializers import (
     ProgramTypeSerializer,
     ProgramSerializer,
     RegistrationSerializer,
-    SelfRegistrationSerializer
+    SelfRegistrationSerializer,
+    ReceiptSerializer
+)
+from .utils.filters import (
+    GuardianFilter, SchoolFilter, ParticipantFilter, ProgramFilter,
+    ProgramTypeFilter, RegistrationFilter, ReceiptFilter, CouponFilter
 )
 from .models import (
     Parent, Contestant, Payment, Ticket,  School, Guardian,
-    Participant, ProgramType, Program, Registration
+    Participant, ProgramType, Program, Registration, Receipt
 )
+from .utils.pagination import CustomPagination
 # from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
+
+
 
 # API VIEWS.
 class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
@@ -64,16 +74,38 @@ class TicketViewSet(viewsets.ReadOnlyModelViewSet):
 # NEW ARCHITECTURE
 class SchoolViewSet(viewsets.ModelViewSet):
     """CRUD for schools"""
-    queryset = School.objects.all().order_by('name')
+    queryset = School.objects.all()
     serializer_class = SchoolSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = SchoolFilter
+    search_fields = ['name', 'phone_number']
+    ordering_fields = '__all__'
+    ordering = ['-created_at']
+    # pagination_class = CustomPagination
 
 
 class GuardianViewSet(viewsets.ModelViewSet):
     """CRUD for guardians"""
-    queryset = Guardian.objects.all().order_by('last_name', 'first_name')
+    queryset = Guardian.objects.all()
     serializer_class = GuardianSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = GuardianFilter
+    search_fields = ['first_name', 'last_name', 'phone_number']
+    ordering_fields = '__all__'
+    ordering = ['-created_at']
+    # pagination_class = CustomPagination
 
 
 class ParticipantViewSet(viewsets.ModelViewSet):
@@ -92,27 +124,89 @@ class ProgramTypeViewSet(viewsets.ModelViewSet):
 
 class ProgramViewSet(viewsets.ModelViewSet):
     """CRUD for programs"""
-    queryset = Program.objects.all().order_by('name')
+    queryset = Program.objects.select_related(
+        'type'
+    ).order_by('name')
     serializer_class = ProgramSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
+
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = ProgramFilter
+
+    search_fields = [
+        'name',
+    ]
+
+    ordering_fields = '__all__'
+    ordering = ['created_at']
+    # pagination_class = CustomPagination
 
 
 class RegistrationViewSet(viewsets.ModelViewSet):
     """CRUD for registrations"""
-    queryset = Registration.objects.all().order_by('-created_at')
+    queryset = Registration.objects.select_related(
+        'participant',
+        'program',
+        'school_at_registration',
+        'guardian_at_registration'
+    ).order_by('-created_at')
     serializer_class = RegistrationSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
+    filter_backends = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class = RegistrationFilter
+    search_fields = ['participant__first_name', 'participant__last_name']
+    ordering_fields = '__all__'
+    ordering = ['-created_at']
+    pagination_class = CustomPagination
 
 
 class SelfRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
+        print('VIEW HIT')
         serializer = SelfRegistrationSerializer(data=request.data)
+        print('SERIALIZER IN VIEW HIT')
         serializer.is_valid(raise_exception=True)
+        print('SERIALIZER VALIDATION FINISHED')
         result = serializer.save()
         return Response(result, status=status.HTTP_201_CREATED)
+
+
+class ReceiptViewSet(viewsets.ModelViewSet):
+    """CRUD for receipts"""
+    queryset         = Receipt.objects.select_related(
+        'registration__participant',
+        'registration__program',
+        'issued_by'
+    ).all()
+    serializer_class = ReceiptSerializer
+    permission_classes = [AllowAny]
+
+    filter_backends  = [
+        DjangoFilterBackend,
+        filters.SearchFilter,
+        filters.OrderingFilter,
+    ]
+    filterset_class  = ReceiptFilter
+
+    search_fields    = [
+        'registration__participant__first_name',
+        'registration__participant__last_name',
+    ]
+
+    ordering_fields  = '__all__'
+    ordering         = ['created_at']
+    pagination_class = CustomPagination
 
 
 # class SelfRegistrationAPIView(APIView):
