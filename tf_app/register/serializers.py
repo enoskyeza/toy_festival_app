@@ -6,8 +6,8 @@ from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
     Payment, Contestant, Parent, Ticket, School, Guardian,
-    Participant, ParticipantGuardian ,ProgramType, Program, Registration
-
+    Participant, ParticipantGuardian ,ProgramType, Program,
+    Registration, Receipt
 )
 from scores.serializers import ScoreSerializer
 
@@ -202,10 +202,21 @@ class RegistrationSerializer(serializers.ModelSerializer):
         ]
 
 
+class ReceiptSerializer(serializers.ModelSerializer):
+    registration = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Receipt
+        fields = ['id', 'registration', 'status', 'issued_by', 'amount', 'created_at']
+
+    def get_registration(self, obj):
+        return f"{obj.registration.participant} – {obj.registration.program}"
+
+
 # SELF REGISTRATION
 class SchoolInputSerializer(serializers.Serializer):
-    id = serializers.IntegerField(required=False)
-    name = serializers.CharField(required=False)
+    id = serializers.IntegerField(required=False, allow_null=True)
+    name = serializers.CharField(required=False, allow_null=True)
     address = serializers.CharField(required=False, allow_blank=True)
     email = serializers.EmailField(required=False, allow_null=True)
     phone_number = serializers.CharField(required=False, allow_null=True)
@@ -231,6 +242,7 @@ class ParticipantInputSerializer(serializers.Serializer):
 
 
 class SelfRegistrationSerializer(serializers.Serializer):
+    print('SERIALIZER HIT')
     program = serializers.PrimaryKeyRelatedField(queryset=Program.objects.all())
     guardian = GuardianInputSerializer()
     participants = ParticipantInputSerializer(many=True)
@@ -248,7 +260,10 @@ class SelfRegistrationSerializer(serializers.Serializer):
             return today.replace(year=today.year - age, day=28)
 
     def get_or_create_school(self, data: dict) -> School:
-        if id_ := data.get('id'):
+        print('SERIALIZER SCHOOL METHOD HIT')
+        id_ = data.get('id')
+        print('ID: ', id_)
+        if id_:
             try:
                 return School.objects.get(id=id_)
             except School.DoesNotExist:

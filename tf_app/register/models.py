@@ -341,6 +341,11 @@ class Program(BaseModel):
         default=False,
         help_text=_('Whether program participation requires a ticket')
     )
+    active = models.BooleanField(
+        default=True,
+        help_text=_('Whether program participation is still active')
+    )
+
 
     class Meta:
         verbose_name = _('Program')
