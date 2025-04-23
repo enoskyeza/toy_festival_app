@@ -1,4 +1,6 @@
 from django_filters.rest_framework import DjangoFilterBackend
+from rest_framework.exceptions import ValidationError
+import logging
 
 from rest_framework import viewsets, filters
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
@@ -171,13 +173,29 @@ class RegistrationViewSet(viewsets.ModelViewSet):
 
 class SelfRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
+    logger = logging.getLogger(__name__)
+
+    # def post(self, request, *args, **kwargs):
+    #     serializer = SelfRegistrationSerializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     result = serializer.save()
+    #     return Response(result, status=status.HTTP_201_CREATED)
 
     def post(self, request, *args, **kwargs):
         serializer = SelfRegistrationSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
+        try:
+            serializer.is_valid(raise_exception=True)
+        except ValidationError as exc:
+            self.logger.error(
+                "Self‐registration validation failed: %s\nPayload: %s",
+                exc.detail,
+                request.data,
+                exc_info=True,
+            )
+            return Response({'errors': exc.detail}, status=status.HTTP_400_BAD_REQUEST)
+
         result = serializer.save()
         return Response(result, status=status.HTTP_201_CREATED)
-
 
 class ReceiptViewSet(viewsets.ModelViewSet):
     """CRUD for receipts"""
