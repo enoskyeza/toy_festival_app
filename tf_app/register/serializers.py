@@ -183,11 +183,20 @@ class MiniParticipantSerializer(serializers.ModelSerializer):
             'id', 'first_name', 'last_name', 'gender'
         ]
 
+
+class MiniGuardianSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Guardian
+        fields = [
+            'id', 'first_name', 'last_name', 'phone_number', 'address', 'email', 'profession'
+        ]
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
     participant = MiniParticipantSerializer(read_only=True)
     program = serializers.StringRelatedField(read_only=True)
     school_at_registration = serializers.StringRelatedField(read_only=True)
-    guardian_at_registration = serializers.StringRelatedField(read_only=True)
+    guardian_at_registration = MiniGuardianSerializer(read_only=True)
 
     class Meta:
         model = Registration
