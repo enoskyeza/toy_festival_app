@@ -17,7 +17,8 @@ from .serializers import (
     ProgramSerializer,
     RegistrationSerializer,
     SelfRegistrationSerializer,
-    ReceiptSerializer
+    ReceiptSerializer,
+    ApprovalSerializer
 )
 from .utils.filters import (
     GuardianFilter, SchoolFilter, ParticipantFilter, ProgramFilter,
@@ -25,7 +26,7 @@ from .utils.filters import (
 )
 from .models import (
     Parent, Contestant, Payment, Ticket,  School, Guardian,
-    Participant, ProgramType, Program, Registration, Receipt
+    Participant, ProgramType, Program, Registration, Receipt, Approval, Coupon
 )
 from .utils.pagination import CustomPagination
 # from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
@@ -197,6 +198,7 @@ class SelfRegistrationAPIView(APIView):
         result = serializer.save()
         return Response(result, status=status.HTTP_201_CREATED)
 
+
 class ReceiptViewSet(viewsets.ModelViewSet):
     """CRUD for receipts"""
     queryset         = Receipt.objects.select_related(
@@ -222,6 +224,25 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     ordering_fields  = '__all__'
     ordering         = ['created_at']
     pagination_class = CustomPagination
+
+
+class ApprovalViewSet(viewsets.ModelViewSet):
+    """
+    Create payments/refunds on a Registration via Approval records.
+    """
+    queryset = Approval.objects.all()
+    serializer_class = ApprovalSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+        if user.is_staff:
+            return super().get_queryset()
+        return Approval.objects.filter(created_by=user)
+
+    def perform_create(self, serializer):
+        # The serializer.create() will set `created_by` and run post_process()
+        serializer.save()
 
 
 # class SelfRegistrationAPIView(APIView):

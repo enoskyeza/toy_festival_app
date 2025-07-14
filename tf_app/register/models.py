@@ -2,9 +2,11 @@ import os
 from django.conf import settings
 from io import BytesIO
 from django.core.files import File
+from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
+from django.core.exceptions import ValidationError
 from datetime import datetime
 
 import qrcode
@@ -71,29 +73,14 @@ class Contestant(BaseModel):
             self.age_category = None
 
     def save(self, *args, **kwargs):
-        if self.payment_status == 'paid' and not self.identifier:
+        self.set_age_category()
+        if self.payment_status == self.PaymentStatus.PAID and not self.identifier:
+            super().save(*args, **kwargs)
             current_year = datetime.now().year % 100
-            self.identifier = f'TF{current_year}{self.id:03d}'
-            self.set_age_category()
-            super().save(*args, **kwargs)
+            self.identifier = f"TF{current_year}{self.id:03d}"
+            self.__class__.objects.filter(pk=self.pk).update(identifier=self.identifier)
         else:
-            self.set_age_category()
             super().save(*args, **kwargs)
-
-
-    # def save(self, *args, **kwargs):
-    #     if not self.pk and not self.identifier:
-    #         super().save(*args, **kwargs)  # Save to generate an ID
-    #
-    #         current_year = datetime.now().year % 100
-    #         self.identifier = f'TF{current_year}{self.id:03d}'
-    #
-    #         if self.identifier is not None:
-    #             self.set_age_category()
-    #             self.save()  # Save again to store the identifier
-    #     else:
-    #         self.set_age_category()
-    #         super().save(*args, **kwargs)
 
 
     def __str__(self):
@@ -261,6 +248,10 @@ class Participant(BaseModel):
         """
         from django.utils import timezone
         today = timezone.now().date()
+
+        if not self.date_of_birth:
+            return None
+
         dob = self.date_of_birth
         age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         return age
@@ -399,22 +390,21 @@ class Registration(BaseModel):
         default=Status.PENDING
     )
 
+
     class Meta:
         verbose_name = _('Registration')
         verbose_name_plural = _('Registrations')
         unique_together = (('participant', 'program'),)
         ordering = ['-created_at']
 
-    # def save(self, *args, **kwargs):
-    #     # On initial save, compute age_at_enrollment
-    #     if not self.pk:
-    #         dob = self.participant.date_of_birth
-    #         enrolled_date = self.registered_at.date() if self.registered_at else timezone.now().date()
-    #         self.age_at_enrollment = (
-    #             enrolled_date.year - dob.year
-    #             - ((enrolled_date.month, enrolled_date.day) < (dob.month, dob.day))
-    #         )
-    #     super().save(*args, **kwargs)
+
+    @property
+    def amount_due(self) -> Decimal:
+        fee = self.program.registration_fee
+        paid = self.approvals.aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0')
+        return fee - paid
 
     def __str__(self):
         return f"{self.participant} @ {self.program}"
@@ -490,7 +480,7 @@ class Coupon(BaseModel):
 class Approval(BaseModel):
     """
     Records a staff action on a Registration: marking it Paid, Cancelled, or Refunded.
-    Handles post-processing to update related models (Registration, Receipt, Ticket, Coupon).
+    Handles post-processing to update related models (Registration, Receipt, Coupon).
     """
     class Status(models.TextChoices):
         PAID      = 'paid',      _('Paid')
@@ -506,25 +496,27 @@ class Approval(BaseModel):
         max_length=10,
         choices=Status.choices
     )
-    created_by     = models.ForeignKey(
+    amount = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        null=True, blank=True,
+        help_text="Portion of the registration fee paid in this approval."
+    )
+    created_by   = models.ForeignKey(
         'accounts.User',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approvals'
     )
     receipt      = models.OneToOneField(
         'Receipt',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approval'
     )
     coupon       = models.OneToOneField(
         'Coupon',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approval'
     )
 
@@ -536,45 +528,60 @@ class Approval(BaseModel):
     def __str__(self):
         return f"Approval({self.status}) for {self.registration}"
 
+    def save(self, *args, **kwargs):
+        # Default unpaid amount → full balance at save time
+        if self.status == self.Status.PAID and self.amount is None:
+            full_due = self.registration.amount_due
+            self.amount = full_due if full_due > Decimal('0') else Decimal('0')
+        super().save(*args, **kwargs)
+
     def post_process(self):
         reg = self.registration
-        old = reg.status
+        old_status = reg.status
 
-        # ——— Validation: only sensible transitions ———
-        if self.status == self.Status.CANCELLED and old == self.Status.PAID:
+        # ——— Valid transitions ———
+        if self.status == self.Status.CANCELLED and old_status == self.Status.PAID:
             raise ValidationError("Cannot cancel a registration that is already paid.")
-        if self.status == self.Status.PAID and old == self.Status.CANCELLED:
-            raise ValidationError("Cannot mark cancelled registration as paid.")
-        if self.status == self.Status.REFUNDED and old != self.Status.PAID:
+        if self.status == self.Status.PAID and old_status == self.Status.CANCELLED:
+            raise ValidationError("Cannot mark a cancelled registration as paid.")
+        if self.status == self.Status.REFUNDED and old_status != self.Status.PAID:
             raise ValidationError("Only paid registrations can be refunded.")
-        # ——— end validations ———
+        # ——— End validations ———
 
         # Idempotent guard
-        if old == self.status:
+        if old_status == self.status:
             return
 
-        # Apply to Registration
+        # Update registration status
         reg.status = self.status
         reg.save(update_fields=['status'])
 
-        # Handle side‑effects
+        # Side-effects
         if self.status == self.Status.PAID:
-            # 1) create receipt
+            paid_amount = self.amount
+            if paid_amount > reg.amount_due:
+                raise ValidationError("Cannot pay more than the amount due.")
+
+            # Create receipt
             receipt = Receipt.objects.create(
                 registration=reg,
                 issued_by=self.created_by,
-                amount=reg.program.registration_fee,
+                amount=paid_amount,
                 status=Receipt.Status.PAID
             )
             self.receipt = receipt
 
-            # 2) ticket if needed
-            if reg.program.requires_ticket:
-                ticket = Coupon.objects.create(registration=reg, status=Coupon.Status.PAID)
-                self.coupon = ticket
+            # Issue coupon only if fully paid and none exists
+            if reg.program.requires_ticket and reg.amount_due == Decimal('0'):
+                if not hasattr(reg, 'coupon'):
+                    coupon = Coupon.objects.create(
+                        registration=reg,
+                        status=Coupon.Status.PAID
+                    )
+                    self.coupon = coupon
 
         elif self.status == self.Status.REFUNDED:
-            # mark receipt & ticket refunded
+            # Refund any linked receipt & coupon
             if self.receipt:
                 self.receipt.status = Receipt.Status.REFUNDED
                 self.receipt.save(update_fields=['status'])
@@ -582,6 +589,14 @@ class Approval(BaseModel):
                 self.coupon.status = Coupon.Status.REFUNDED
                 self.coupon.save(update_fields=['status'])
 
-        # save Approval links
-        self.save(update_fields=['receipt', 'coupon'])
+        # Persist updated foreign-keys on this Approval
+        update_fields = []
+        if self.receipt_id:
+            update_fields.append('receipt')
+        if self.coupon_id:
+            update_fields.append('coupon')
+        if update_fields:
+            self.save(update_fields=update_fields)
+
         return self
+

@@ -1,13 +1,14 @@
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from datetime import date
+from typing import Optional
 
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
     Payment, Contestant, Parent, Ticket, School, Guardian,
     Participant, ParticipantGuardian ,ProgramType, Program,
-    Registration, Receipt
+    Registration, Receipt, Approval, Coupon
 )
 from scores.serializers import ScoreSerializer
 
@@ -197,12 +198,16 @@ class RegistrationSerializer(serializers.ModelSerializer):
     program = serializers.StringRelatedField(read_only=True)
     school_at_registration = serializers.StringRelatedField(read_only=True)
     guardian_at_registration = MiniGuardianSerializer(read_only=True)
+    amount_due = serializers.DecimalField(
+        max_digits=8, decimal_places=2,
+        read_only=True
+    )
 
     class Meta:
         model = Registration
         fields = [
             'id', 'participant', 'program', 'age_at_registration',
-            'school_at_registration', 'guardian_at_registration', 'status'
+            'school_at_registration', 'guardian_at_registration', 'status', 'amount_due'
         ]
 
 
@@ -215,6 +220,28 @@ class ReceiptSerializer(serializers.ModelSerializer):
 
     def get_registration(self, obj):
         return f"{obj.registration.participant} – {obj.registration.program}"
+
+
+class ApprovalSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Approval
+        fields = ['id', 'registration', 'status', 'amount']
+        read_only_fields = ['id']
+
+    def validate_amount(self, amt):
+        reg = Registration.objects.get(pk=self.initial_data['registration'])
+        if amt is not None and amt > reg.amount_due:
+            raise serializers.ValidationError("Cannot pay more than the amount due.")
+        return amt
+
+    def create(self, validated_data):
+        print('SUBMITTED DATA: ', validated_data)
+        user = self.context['request'].user
+        validated_data['created_by'] = user
+        approval = super().create(validated_data)
+        approval.post_process()
+        return approval
+
 
 
 # SELF REGISTRATION
@@ -250,7 +277,11 @@ class SelfRegistrationSerializer(serializers.Serializer):
     guardian = GuardianInputSerializer()
     participants = ParticipantInputSerializer(many=True)
 
-    def normalize_phone(self, phone: str | None) -> str | None:
+    # def normalize_phone(self, phone: str | None) -> str | None:
+    #     digits = ''.join(filter(str.isdigit, phone or ''))
+    #     return '256' + digits[-9:] if len(digits) >= 9 else None
+
+    def normalize_phone(self, phone: Optional[str]) -> Optional[str]:
         digits = ''.join(filter(str.isdigit, phone or ''))
         return '256' + digits[-9:] if len(digits) >= 9 else None
 
@@ -264,7 +295,7 @@ class SelfRegistrationSerializer(serializers.Serializer):
 
     def get_or_create_school(self, data: dict) -> School:
         id_ = data.get('id')
-        print('ID: ', id_)
+
         if id_:
             try:
                 return School.objects.get(id=id_)
@@ -387,114 +418,3 @@ class SelfRegistrationSerializer(serializers.Serializer):
             'report': failures
         }
 
-
-# class SelfRegistrationSerializer(serializers.Serializer):
-#     program = serializers.PrimaryKeyRelatedField(queryset=Program.objects.all())
-#     guardian = GuardianInputSerializer()
-#     participants = ParticipantInputSerializer(many=True)
-#
-#     def normalize_phone(self, phone):
-#         digits = ''.join(filter(str.isdigit, phone or ''))
-#         if len(digits) >= 9:
-#             return '256' + digits[-9:]
-#         return None
-#
-#     def get_or_create_school(self, data):
-#         if data.get('id'):
-#             try:
-#                 return School.objects.get(id=data['id'])
-#             except School.DoesNotExist:
-#                 raise ValidationError(f"School with id {data['id']} does not exist.")
-#
-#         name = data.get('name', '').strip()
-#         if not name:
-#             raise ValidationError("School name is required if not providing an id.")
-#         school, _ = School.objects.get_or_create(
-#             name__iexact=name,
-#             defaults={
-#                 'name': name,
-#                 'address': data.get('address'),
-#                 'email': data.get('email'),
-#                 'phone_number': self.normalize_phone(data.get('phone_number'))
-#             }
-#         )
-#         return school
-#
-#     def get_or_create_guardian(self, data):
-#         phone = self.normalize_phone(data.get('phone_number'))
-#         qs = Guardian.objects.all()
-#         if phone:
-#             guardian = qs.filter(phone_number=phone).first()
-#         elif data.get('email'):
-#             guardian = qs.filter(email__iexact=data['email']).first()
-#         else:
-#             guardian = qs.filter(
-#                 first_name__iexact=data['first_name'].strip(),
-#                 last_name__iexact=data['last_name'].strip()
-#             ).first()
-#
-#         if guardian:
-#             return guardian
-#         return Guardian.objects.create(
-#             first_name=data['first_name'].strip(),
-#             last_name=data['last_name'].strip(),
-#             profession=data.get('profession'),
-#             address=data.get('address'),
-#             email=data.get('email'),
-#             phone_number=phone
-#         )
-#
-#     def get_or_create_participant(self, data, guardian, school):
-#         # try to find existing participant for this guardian by name
-#         qs = Participant.objects.filter(
-#             first_name__iexact=data['first_name'].strip(),
-#             last_name__iexact=data['last_name'].strip(),
-#             guardians=guardian
-#         )
-#         participant = qs.first()
-#         if participant:
-#             return participant
-#
-#         participant = Participant.objects.create(
-#             first_name=data['first_name'].strip(),
-#             last_name=data['last_name'].strip(),
-#             email=data.get('email'),
-#             date_of_birth=data['date_of_birth'],
-#             gender=data['gender'],
-#             current_school=school
-#         )
-#         ParticipantGuardian.objects.create(
-#             participant=participant,
-#             guardian=guardian,
-#             relationship='other',
-#             is_primary=True
-#         )
-#         return participant
-#
-#     @transaction.atomic
-#     def create(self, validated_data):
-#         program = validated_data['program']
-#         school_data = validated_data['school']
-#         guardian_data = validated_data['guardian']
-#         participants_data = validated_data['participants']
-#
-#         school = self.get_or_create_school(school_data)
-#         guardian = self.get_or_create_guardian(guardian_data)
-#
-#         registrations = []
-#         for pdata in participants_data:
-#             participant = self.get_or_create_participant(pdata, guardian, school)
-#
-#             reg, created = Registration.objects.get_or_create(
-#                 participant=participant,
-#                 program=program,
-#                 defaults={
-#                     'age_at_registration': pdata['age_at_registration'],
-#                     'school_at_registration': school,
-#                     'guardian_at_registration': guardian,
-#                     'status': Registration.Status.PENDING
-#                 }
-#             )
-#             registrations.append(reg)
-#
-#         return registrations
