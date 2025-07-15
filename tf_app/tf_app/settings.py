@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'core',
     'register.apps.RegisterConfig',
     'scores',
+    'gallery',
     'blog.apps.BlogConfig',
 
     "debug_toolbar",

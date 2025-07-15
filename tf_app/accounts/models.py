@@ -1,6 +1,9 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from django.contrib.contenttypes.fields import GenericRelation
+
+from core.models import BaseModel
 
 class UserManager(BaseUserManager):
     def create_user(self, username, email=None, password=None, **extra_fields):
@@ -28,6 +31,7 @@ class User(AbstractBaseUser, PermissionsMixin):
         ADMIN = 'admin', 'Admin'
         STAFF = 'staff', 'Staff'
         JUDGE = 'judge', 'Judge'
+        AUTHOR = 'author', 'Author'
 
     base_role = Role.ADMIN
 
@@ -52,7 +56,6 @@ class User(AbstractBaseUser, PermissionsMixin):
 
     def __str__(self):
         return f"{self.first_name} {self.last_name}" if self.first_name and self.last_name else self.username
-
 
 
 class StaffManager(BaseUserManager):
@@ -85,3 +88,37 @@ class Judge(User):
     class Meta:
         proxy = True
 
+
+class AuthorManager(BaseUserManager):
+    def get_queryset(self):
+        return (
+            super()
+            .get_queryset()
+            .filter(role='author', is_active=True)
+        )
+
+class Author(User):  # Proxy over User
+    objects = AuthorManager()
+
+    class Meta:
+        proxy = True
+        verbose_name = 'Author'
+        verbose_name_plural = 'Authors'
+
+    @property
+    def profile(self):
+        profile, _ = AuthorProfile.objects.get_or_create(user=self)
+        return profile
+
+    def publish(self, **post_kwargs):
+        from blog.models import Post
+        return Post.objects.create(author=self.profile, **post_kwargs)
+
+
+class AuthorProfile(BaseModel):
+    user   = models.OneToOneField(User, on_delete=models.CASCADE)
+    bio    = models.TextField(blank=True)
+    avatar = models.ImageField(upload_to='authors/%Y/%m/%d/', blank=True)
+
+    def __str__(self):
+        return f"Profile for {self.user.username}"
