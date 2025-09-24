@@ -1,6 +1,7 @@
-import os
-from django.conf import settings
+# Current models.py
 from io import BytesIO
+
+from django.conf import settings
 from django.core.files import File
 from decimal import Decimal
 from django.db import models
@@ -8,6 +9,7 @@ from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
 from django.core.exceptions import ValidationError
 from datetime import datetime
+from django.utils.text import slugify
 
 import qrcode
 from PIL import Image
@@ -336,6 +338,42 @@ class Program(BaseModel):
         default=True,
         help_text=_('Whether program participation is still active')
     )
+    
+    # Additional fields from frontend form
+    long_description = models.TextField(blank=True, null=True, help_text=_("Detailed program description"))
+    level = models.CharField(
+        max_length=20,
+        choices=[
+            ('beginner', 'Beginner'),
+            ('intermediate', 'Intermediate'),
+            ('advanced', 'Advanced'),
+        ],
+        blank=True,
+        null=True,
+        help_text=_("Skill level required")
+    )
+    thumbnail_url = models.URLField(blank=True, null=True, help_text=_("Thumbnail image URL"))
+    video_url = models.URLField(blank=True, null=True, help_text=_("Preview video URL"))
+    instructor = models.CharField(max_length=200, blank=True, null=True, help_text=_("Instructor name"))
+    featured = models.BooleanField(default=False, help_text=_("Whether this is a featured program"))
+
+    # Registration categorisation (optional)
+    category_label = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text=_("Label shown on forms for participant categorisation (e.g. 'Age Group').")
+    )
+    category_options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_("List of allowed category values (e.g. ['6-9 years', '10-13 years']). Leave empty for free text.")
+    )
+    
+    # JSON fields for curriculum data
+    modules = models.JSONField(default=list, blank=True, help_text=_("List of curriculum modules"))
+    learning_outcomes = models.JSONField(default=list, blank=True, help_text=_("List of learning outcomes"))
+    requirements = models.JSONField(default=list, blank=True, help_text=_("List of prerequisites and requirements"))
 
 
     class Meta:
@@ -345,6 +383,116 @@ class Program(BaseModel):
 
     def __str__(self):
         return self.name
+
+
+class ProgramForm(models.Model):
+    """
+    A logical form structure tied to a program, like "Junior Form" or "Adult Form".
+    """
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='forms')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    slug = models.SlugField(unique=True)
+    is_default = models.BooleanField(default=False, help_text="Used when auto-selecting forms")
+    age_min = models.PositiveIntegerField(blank=True, null=True)
+    age_max = models.PositiveIntegerField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('program', 'title')
+        ordering = ['program', 'age_min']
+
+    def __str__(self):
+        return f"{self.program.name} – {self.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title)
+            slug = base
+            counter = 1
+            while ProgramForm.objects.filter(slug=slug).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+
+class FormField(models.Model):
+    """
+    Field within a ProgramForm, supports conditional display logic.
+    """
+    FIELD_TYPES = [
+        ('text', 'Text Input'),
+        ('textarea', 'Text Area'),
+        ('email', 'Email'),
+        ('number', 'Number'),
+        ('date', 'Date'),
+        ('dropdown', 'Dropdown'),
+        ('radio', 'Radio Button'),
+        ('checkbox', 'Checkbox'),
+        ('file', 'File Upload'),
+        ('url', 'URL'),
+        ('phone', 'Phone'),
+    ]
+
+    form = models.ForeignKey(ProgramForm, on_delete=models.CASCADE, related_name='fields')
+    field_name = models.CharField(max_length=100)
+    label = models.CharField(max_length=255)
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
+    is_required = models.BooleanField(default=False)
+    help_text = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    options = models.JSONField(blank=True, null=True, help_text="Used for dropdown/radio/checkbox")
+    max_length = models.PositiveIntegerField(null=True, blank=True)
+    min_value = models.FloatField(null=True, blank=True)
+    max_value = models.FloatField(null=True, blank=True)
+    allowed_file_types = models.JSONField(blank=True, null=True)
+    max_file_size = models.PositiveIntegerField(blank=True, null=True)
+    conditional_logic = models.JSONField(blank=True, null=True, help_text="Rules for showing this field")
+
+    class Meta:
+        ordering = ['order', 'id']
+        unique_together = ['form', 'field_name']
+
+    def __str__(self):
+        return f"{self.form.title}: {self.label}"
+
+    def clean(self):
+        if self.field_type in ['dropdown', 'radio'] and not self.options:
+            raise ValidationError(f"{self.field_type} fields must include options.")
+        if self.field_type not in ['dropdown', 'radio', 'checkbox'] and self.options:
+            raise ValidationError(f"{self.field_type} should not have options.")
+        if self.field_type == 'number' and self.min_value is not None and self.max_value is not None:
+            if self.min_value >= self.max_value:
+                raise ValidationError("Minimum value must be less than maximum value.")
+
+
+class FormResponse(models.Model):
+    form = models.ForeignKey(ProgramForm, on_delete=models.CASCADE, related_name='responses')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Response {self.id} to {self.form.title}"
+
+
+class FormResponseEntry(models.Model):
+    response = models.ForeignKey(FormResponse, on_delete=models.CASCADE, related_name='entries')
+    field = models.ForeignKey(FormField, on_delete=models.CASCADE)
+    value = models.TextField(blank=True)
+    file_upload = models.FileField(upload_to='form_uploads/', null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.response} - {self.field.field_name}"
+
+    def clean(self):
+        if self.field.field_type == 'file':
+            if not self.file_upload:
+                raise ValidationError("File upload required for this field")
+        else:
+            if not self.value:
+                raise ValidationError("Non-file fields require a value")
 
 
 class Registration(BaseModel):
@@ -389,6 +537,12 @@ class Registration(BaseModel):
         choices=Status.choices,
         default=Status.PENDING
     )
+    category_value = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text=_("Participant-chosen category for this program (matches Program.category_options if provided).")
+    )
 
 
     class Meta:
@@ -400,7 +554,7 @@ class Registration(BaseModel):
 
     @property
     def amount_due(self) -> Decimal:
-        fee = self.program.registration_fee
+        fee = self.program.registration_fee or Decimal('0')
         paid = self.approvals.aggregate(
             total=models.Sum('amount')
         )['total'] or Decimal('0')

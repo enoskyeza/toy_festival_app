@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from rest_framework import serializers
 from accounts.models import Judge
-from register.models import Contestant
+from register.models import Contestant, Participant
 from .models import MainCategory, JudgingCriteria, Score, JudgeComment
 
 class MainCategorySerializer(serializers.ModelSerializer):

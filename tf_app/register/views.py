@@ -1,12 +1,20 @@
+# current views.py
+
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 import logging
 
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, filters, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework.decorators import action
+
+from decimal import Decimal
+
+from .models import ProgramForm, FormResponse, FormResponseEntry
+from .serializers import ProgramFormSerializer, DynamicFormSubmissionSerializer
 
 from .serializers import (
     PaymentSerializer, ContestantSerializer, ParentSerializer,
@@ -28,6 +36,8 @@ from .models import (
     Parent, Contestant, Payment, Ticket,  School, Guardian,
     Participant, ProgramType, Program, Registration, Receipt, Approval, Coupon
 )
+from django.db.models import Count, Q, Sum, DecimalField, Value
+from django.db.models.functions import Coalesce
 from .utils.pagination import CustomPagination
 # from .forms import RegistrationForm, ParentForm, ContestantForm, PaymentForm
 
@@ -119,10 +129,10 @@ class ParticipantViewSet(viewsets.ModelViewSet):
 
 
 class ProgramTypeViewSet(viewsets.ModelViewSet):
-    """CRUD for programs"""
+    """CRUD for program types/categories"""
     queryset = ProgramType.objects.all().order_by('name')
-    serializer_class = ProgramSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    serializer_class = ProgramTypeSerializer
+    permission_classes = []  # Allow all operations for now
 
 
 class ProgramViewSet(viewsets.ModelViewSet):
@@ -131,7 +141,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
         'type'
     ).order_by('name')
     serializer_class = ProgramSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = []  # Allow all operations for now
 
     filter_backends = [
         DjangoFilterBackend,
@@ -148,15 +158,228 @@ class ProgramViewSet(viewsets.ModelViewSet):
     ordering = ['created_at']
     # pagination_class = CustomPagination
 
+    @action(detail=False, methods=['get'], url_path='dashboard-stats')
+    def dashboard_stats(self, request):
+        """
+        Get dashboard statistics including program counts, enrollments, and form submissions
+        """
+        try:
+            # Get program statistics
+            total_programs = Program.objects.count()
+            active_programs = Program.objects.filter(active=True).count()
+            
+            # Get enrollment statistics (registrations)
+            total_enrollments = Registration.objects.count()
+            
+            # Get form submission statistics (with error handling for missing tables)
+            try:
+                total_form_submissions = FormResponse.objects.count()
+            except:
+                total_form_submissions = 0
+            
+            # Get recent programs with enrollment counts
+            programs_with_enrollments = Program.objects.annotate(
+                enrollments=Count('registrations')
+            ).order_by('-created_at')[:10]
+            
+            # Get recent forms with submission counts (with error handling)
+            try:
+                forms_with_submissions = ProgramForm.objects.annotate(
+                    submissions=Count('responses')
+                ).select_related('program').order_by('-id')[:10]
+            except:
+                forms_with_submissions = []
+            
+            # Serialize program data
+            programs_data = []
+            for program in programs_with_enrollments:
+                programs_data.append({
+                    'id': str(program.id),
+                    'title': program.name,
+                    'category': program.type.name if program.type else 'General',
+                    'status': 'active' if program.active else 'inactive',
+                    'enrollments': program.enrollments,
+                    'createdAt': program.created_at.strftime('%Y-%m-%d') if program.created_at else None
+                })
+            
+            # Serialize form data
+            forms_data = []
+            for form in forms_with_submissions:
+                try:
+                    forms_data.append({
+                        'id': f'form-{form.id}',
+                        'name': form.title,
+                        'programId': str(form.program.id),
+                        'programTitle': form.program.name,
+                        'fields': form.fields.count() if hasattr(form, 'fields') else 0,
+                        'submissions': form.submissions,
+                        'createdAt': form.program.created_at.strftime('%Y-%m-%d') if form.program.created_at else None
+                    })
+                except Exception as e:
+                    # Skip forms that cause errors
+                    continue
+            
+            return Response({
+                'stats': {
+                    'total_programs': total_programs,
+                    'active_programs': active_programs,
+                    'total_enrollments': total_enrollments,
+                    'total_form_submissions': total_form_submissions
+                },
+                'programs': programs_data,
+                'forms': forms_data
+            })
+        except Exception as e:
+            # Return basic stats if there are any database issues
+            return Response({
+                'stats': {
+                    'total_programs': 0,
+                    'active_programs': 0,
+                    'total_enrollments': 0,
+                    'total_form_submissions': 0
+                },
+                'programs': [],
+                'forms': []
+            })
+
+    @action(detail=True, methods=['get'], url_path='dashboard')
+    def program_dashboard(self, request, pk=None):
+        program = self.get_object()
+
+        base_queryset = Registration.objects.select_related(
+            'participant',
+            'program',
+            'program__type',
+            'school_at_registration',
+            'guardian_at_registration'
+        ).select_related('coupon').prefetch_related('receipts', 'approvals').filter(program=program).order_by('-created_at')
+
+        # Map UI date filters (date_from/date_to) to filterset fields (created_from/created_to)
+        params = request.query_params.copy()
+        if 'date_from' in params and 'created_from' not in params:
+            params['created_from'] = params.get('date_from')
+        if 'date_to' in params and 'created_to' not in params:
+            params['created_to'] = params.get('date_to')
+
+        reg_filter = RegistrationFilter(params, queryset=base_queryset)
+        filtered_queryset = reg_filter.qs
+
+        # Overall statistics (unfiltered)
+        registrations_for_stats = Registration.objects.filter(program=program)
+        status_counts = registrations_for_stats.aggregate(
+            total=Count('id', distinct=True),
+            paid=Count('id', filter=Q(status=Registration.Status.PAID), distinct=True),
+            pending=Count('id', filter=Q(status=Registration.Status.PENDING), distinct=True),
+            cancelled=Count('id', filter=Q(status=Registration.Status.CANCELLED), distinct=True),
+            refunded=Count('id', filter=Q(status=Registration.Status.REFUNDED), distinct=True),
+        )
+
+        expected_revenue = registrations_for_stats.exclude(status=Registration.Status.CANCELLED).aggregate(
+            expected=Coalesce(
+                Sum('program__registration_fee'),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            )
+        )['expected'] or Decimal('0')
+
+        collected_revenue = Approval.objects.filter(
+            registration__program=program,
+            status=Approval.Status.PAID
+        ).aggregate(
+            total=Coalesce(
+                Sum('amount'),
+                Value(0, output_field=DecimalField(max_digits=12, decimal_places=2))
+            )
+        )['total'] or Decimal('0')
+
+        outstanding_revenue = expected_revenue - collected_revenue
+        if outstanding_revenue < Decimal('0'):
+            outstanding_revenue = Decimal('0')
+
+        # Category breakdown (overall)
+        category_counts = registrations_for_stats.values('category_value').annotate(
+            count=Count('id')
+        )
+        option_counts = {item['category_value'] or 'UNCATEGORIZED': item['count'] for item in category_counts}
+
+        breakdown = []
+        options = program.category_options or []
+        available_categories = list(options)
+        for option in options:
+            breakdown.append({
+                'label': option,
+                'value': option,
+                'count': option_counts.pop(option, 0)
+            })
+
+        for label, count in option_counts.items():
+            if label != 'UNCATEGORIZED' and label not in available_categories:
+                available_categories.append(label)
+            breakdown.append({
+                'label': label if label != 'UNCATEGORIZED' else 'Uncategorised',
+                'value': None if label == 'UNCATEGORIZED' else label,
+                'count': count
+            })
+
+        # Paginate filtered registrations
+        paginator = CustomPagination()
+        page = paginator.paginate_queryset(filtered_queryset, request, view=self)
+        serializer = RegistrationSerializer(
+            page if page is not None else filtered_queryset,
+            many=True,
+            context={'request': request}
+        )
+
+        if page is not None:
+            registrations_payload = paginator.get_paginated_response(serializer.data).data
+        else:
+            registrations_payload = {
+                'pagination': None,
+                'results': serializer.data,
+            }
+
+        applied_filters = {}
+        for key in request.query_params:
+            values = request.query_params.getlist(key)
+            applied_filters[key] = values if len(values) > 1 else values[0]
+
+        response_payload = {
+            'program': ProgramSerializer(program, context={'request': request}).data,
+            'stats': {
+                'total_registrations': status_counts.get('total', 0),
+                'paid_registrations': status_counts.get('paid', 0),
+                'pending_registrations': status_counts.get('pending', 0),
+                'cancelled_registrations': status_counts.get('cancelled', 0),
+                'refunded_registrations': status_counts.get('refunded', 0),
+                'expected_revenue': expected_revenue,
+                'collected_revenue': collected_revenue,
+                'outstanding_revenue': outstanding_revenue,
+            },
+            'filters': {
+                'applied': applied_filters,
+                'available': {
+                    'statuses': [
+                        {'value': choice[0], 'label': choice[1]}
+                        for choice in Registration.Status.choices
+                    ],
+                    'categories': available_categories,
+                }
+            },
+            'category_breakdown': breakdown,
+            'registrations': registrations_payload,
+        }
+
+        return Response(response_payload)
+
 
 class RegistrationViewSet(viewsets.ModelViewSet):
     """CRUD for registrations"""
     queryset = Registration.objects.select_related(
         'participant',
         'program',
+        'program__type',
         'school_at_registration',
         'guardian_at_registration'
-    ).order_by('-created_at')
+    ).select_related('coupon').prefetch_related('receipts', 'approvals').order_by('-created_at')
     serializer_class = RegistrationSerializer
     permission_classes = [IsAuthenticatedOrReadOnly]
 
@@ -176,14 +399,8 @@ class SelfRegistrationAPIView(APIView):
     permission_classes = [AllowAny]
     logger = logging.getLogger(__name__)
 
-    # def post(self, request, *args, **kwargs):
-    #     serializer = SelfRegistrationSerializer(data=request.data)
-    #     serializer.is_valid(raise_exception=True)
-    #     result = serializer.save()
-    #     return Response(result, status=status.HTTP_201_CREATED)
-
     def post(self, request, *args, **kwargs):
-        serializer = SelfRegistrationSerializer(data=request.data)
+        serializer = SelfRegistrationSerializer(data=request.data, context={'request': request})
         try:
             serializer.is_valid(raise_exception=True)
         except ValidationError as exc:
@@ -197,6 +414,7 @@ class SelfRegistrationAPIView(APIView):
 
         result = serializer.save()
         return Response(result, status=status.HTTP_201_CREATED)
+
 
 
 class ReceiptViewSet(viewsets.ModelViewSet):
@@ -243,6 +461,58 @@ class ApprovalViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         # The serializer.create() will set `created_by` and run post_process()
         serializer.save()
+
+
+class ProgramFormViewSet(viewsets.ModelViewSet):
+    queryset = ProgramForm.objects.all().select_related('program').prefetch_related('fields')
+    serializer_class = ProgramFormSerializer
+    lookup_field = 'slug'
+
+    def get_serializer_class(self):
+        # Use write serializer for creates/updates, read serializer otherwise
+        from .serializers import ProgramFormWriteSerializer
+        if self.action in ['create', 'update', 'partial_update']:
+            return ProgramFormWriteSerializer
+        return ProgramFormSerializer
+
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        program_slug = self.kwargs.get('program_slug')
+        if program_slug:
+            return queryset.filter(program__slug=program_slug)
+        return queryset.none()
+
+    @action(detail=True, methods=['get'])
+    def structure(self, request, program_slug=None, slug=None):
+        form = self.get_object()
+        serializer = ProgramFormSerializer(form)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['post'])
+    def submit(self, request, program_slug=None, slug=None):
+        form = self.get_object()
+        serializer = DynamicFormSubmissionSerializer(data=request.data, form=form)
+        serializer.is_valid(raise_exception=True)
+
+        user = request.user if request.user.is_authenticated else None
+        response = FormResponse.objects.create(
+            form=form,
+            submitted_by=user,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            user_agent=request.META.get("HTTP_USER_AGENT", "")
+        )
+
+        for field in form.fields.all():
+            val = serializer.validated_data.get(field.field_name)
+            entry = FormResponseEntry(response=response, field=field)
+            if field.field_type == 'file' and val:
+                entry.file_upload = val
+                entry.value = val.name
+            else:
+                entry.value = str(val or '')
+            entry.save()
+
+        return Response({"message": "Form submitted successfully", "response_id": response.id}, status=201)
 
 
 # class SelfRegistrationAPIView(APIView):

@@ -2,7 +2,8 @@ from django.contrib import admin
 from .models import (
     Payment, Parent, Contestant, Ticket,
     School, Guardian, Participant, ParticipantGuardian,
-    Program, Registration, Receipt, Coupon, Approval, ProgramType
+    Program, Registration, Receipt, Coupon, Approval, ProgramType,
+    ProgramForm, FormField, FormResponse, FormResponseEntry
 )
 
 
@@ -122,4 +123,39 @@ class ApprovalAdmin(admin.ModelAdmin):
     list_filter = ('status',)
     search_fields = ('registration__participant__first_name', 'registration__participant__last_name')
     ordering = ('-created_at', )
+
+
+# Program Form Admin
+class FormFieldInline(admin.StackedInline):
+    model = FormField
+    extra = 1
+    fields = (
+        'field_name', 'label', 'field_type', 'is_required', 'order',
+        'help_text', 'options', 'max_length', 'min_value', 'max_value',
+        'allowed_file_types', 'max_file_size', 'conditional_logic',
+    )
+
+
+@admin.register(ProgramForm)
+class ProgramFormAdmin(admin.ModelAdmin):
+    list_display = ('id', 'program', 'title', 'slug', 'is_default', 'age_min', 'age_max')
+    list_filter = ('program', 'is_default')
+    search_fields = ('title', 'slug', 'program__name')
+    readonly_fields = ('slug',)
+    inlines = [FormFieldInline]
+
+
+class FormResponseEntryInline(admin.TabularInline):
+    model = FormResponseEntry
+    extra = 0
+    fields = ('field', 'value', 'file_upload')
+    readonly_fields = ()
+
+
+@admin.register(FormResponse)
+class FormResponseAdmin(admin.ModelAdmin):
+    list_display = ('id', 'form', 'submitted_by', 'submitted_at')
+    list_filter = ('form',)
+    search_fields = ('form__title', 'submitted_by__username')
+    inlines = [FormResponseEntryInline]
 
