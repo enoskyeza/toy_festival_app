@@ -8,7 +8,8 @@ from rest_framework import serializers
 from .models import (
     Payment, Contestant, Parent, Ticket, School, Guardian,
     Participant, ParticipantGuardian ,ProgramType, Program,
-    Registration, Receipt, Approval, Coupon, ProgramForm, FormField
+    Registration, Receipt, Approval, Coupon, ProgramForm, FormField,
+    FormResponse, FormResponseEntry
 )
 from scores.serializers import ScoreSerializer
 from .forms import RegistrationUtils
@@ -455,6 +456,129 @@ class FormFieldSerializer(serializers.ModelSerializer):
             'max_value', 'allowed_file_types', 'max_file_size', 'conditional_logic'
         ]
         read_only_fields = ['id']
+
+
+class HybridParticipantInputSerializer(serializers.Serializer):
+    """
+    Enhanced participant input for hybrid registration.
+    """
+    first_name = serializers.CharField(max_length=100)
+    last_name = serializers.CharField(max_length=100)
+    email = serializers.EmailField(required=False, allow_blank=True)
+    gender = serializers.ChoiceField(choices=Participant.Gender.choices)
+    age_at_registration = serializers.IntegerField()
+    school_at_registration = SchoolInputSerializer()
+    category_value = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+
+
+class HybridRegistrationSerializer(serializers.Serializer):
+    """
+    Handles hybrid registration with static guardian/participant data + dynamic form fields.
+    """
+    program = serializers.PrimaryKeyRelatedField(queryset=Program.objects.all())
+    guardian = GuardianInputSerializer()
+    participants = HybridParticipantInputSerializer(many=True)
+    custom_fields = serializers.DictField(required=False, default=dict)
+
+    @transaction.atomic
+    def create(self, validated_data: dict) -> dict:
+        program = validated_data['program']
+        guardian_data = validated_data['guardian']
+        participants_data = validated_data['participants']
+        custom_fields_data = validated_data.get('custom_fields', {})
+
+        # Create/get guardian using existing utility
+        guardian = RegistrationUtils.get_or_create_guardian(guardian_data)
+        successes = []
+        failures = []
+
+        for pdata in participants_data:
+            full_name = f"{pdata['first_name'].strip()} {pdata['last_name'].strip()}"
+            school_data = pdata.pop('school_at_registration')
+            school = RegistrationUtils.get_or_create_school(school_data)
+            participant = RegistrationUtils.get_or_create_participant(pdata, guardian, school)
+
+            category_value = (pdata.get('category_value') or '').strip() or None
+            if program.category_options and category_value and category_value not in program.category_options:
+                raise serializers.ValidationError({
+                    'participants': [{
+                        'full_name': full_name,
+                        'category_value': f"'{category_value}' is not a valid option for this program."
+                    }]
+                })
+
+            try:
+                # Create registration
+                reg, created = Registration.objects.get_or_create(
+                    participant=participant,
+                    program=program,
+                    defaults={
+                        'age_at_registration': pdata['age_at_registration'],
+                        'school_at_registration': school,
+                        'guardian_at_registration': guardian,
+                        'status': Registration.Status.PENDING,
+                        'category_value': category_value,
+                    }
+                )
+                
+                if not created and category_value and reg.category_value != category_value:
+                    reg.category_value = category_value
+                    reg.save(update_fields=['category_value'])
+
+                # Handle custom form fields if provided
+                if custom_fields_data and created:
+                    self._handle_custom_fields(program, participant, custom_fields_data)
+
+                if created:
+                    successes.append({
+                        'reg_no': reg.id,
+                        'first_name': participant.first_name,
+                        'last_name': participant.last_name
+                    })
+                else:
+                    failures.append({
+                        'name': full_name,
+                        'reason': 'Already registered for this program'
+                    })
+            except Exception as exc:
+                failures.append({
+                    'name': full_name,
+                    'reason': str(exc)
+                })
+
+        return {
+            'guardian': f"{guardian.first_name} {guardian.last_name}",
+            'participants': successes,
+            'report': failures
+        }
+
+    def _handle_custom_fields(self, program: Program, participant: Participant, custom_fields: dict):
+        """
+        Handle custom form field submissions.
+        """
+        # Get the program's default form
+        custom_form = program.forms.filter(is_default=True).first()
+        if not custom_form:
+            return
+
+        # Create form response
+        response = FormResponse.objects.create(
+            form=custom_form,
+            submitted_by=self.context.get('request').user if self.context.get('request') and self.context.get('request').user.is_authenticated else None,
+            ip_address=self.context.get('request').META.get('REMOTE_ADDR') if self.context.get('request') else None,
+            user_agent=self.context.get('request').META.get('HTTP_USER_AGENT', '') if self.context.get('request') else '',
+        )
+
+        # Create form response entries
+        for field in custom_form.fields.all():
+            field_value = custom_fields.get(field.field_name)
+            if field_value is not None:
+                entry = FormResponseEntry(
+                    response=response,
+                    field=field,
+                    value=str(field_value) if not isinstance(field_value, str) else field_value
+                )
+                entry.save()
 
 
 class ProgramFormSerializer(serializers.ModelSerializer):

@@ -14,7 +14,7 @@ from rest_framework.decorators import action
 from decimal import Decimal
 
 from .models import ProgramForm, FormResponse, FormResponseEntry
-from .serializers import ProgramFormSerializer, DynamicFormSubmissionSerializer
+from .serializers import ProgramFormSerializer, DynamicFormSubmissionSerializer, HybridRegistrationSerializer
 
 from .serializers import (
     PaymentSerializer, ContestantSerializer, ParentSerializer,
@@ -98,6 +98,46 @@ class SchoolViewSet(viewsets.ModelViewSet):
     ]
     filterset_class = SchoolFilter
     search_fields = ['name', 'phone_number']
+    
+    @action(detail=False, methods=['get'], url_path='search')
+    def search_schools(self, request):
+        """
+        Search schools by name for registration modal.
+        """
+        query = request.query_params.get('q', '').strip()
+        if not query:
+            return Response([])
+        
+        schools = School.objects.filter(
+            name__icontains=query
+        ).order_by('name')[:10]
+        
+        return Response([
+            {
+                'id': school.id,
+                'name': school.name,
+                'address': school.address,
+                'phone_number': school.phone_number,
+            }
+            for school in schools
+        ])
+    
+    @action(detail=False, methods=['post'], url_path='create')
+    def create_school(self, request):
+        """
+        Create a new school from registration modal.
+        """
+        serializer = SchoolSerializer(data=request.data)
+        if serializer.is_valid():
+            school = serializer.save()
+            return Response({
+                'id': school.id,
+                'name': school.name,
+                'address': school.address,
+                'phone_number': school.phone_number,
+            }, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     ordering_fields = '__all__'
     ordering = ['-created_at']
     # pagination_class = CustomPagination
@@ -241,6 +281,112 @@ class ProgramViewSet(viewsets.ModelViewSet):
                 'programs': [],
                 'forms': []
             })
+
+    @action(detail=True, methods=['get'], url_path='registration-form')
+    def get_registration_form(self, request, pk=None):
+        """
+        Get the complete registration form structure for a program.
+        Returns static steps (Guardian + Participant) + dynamic steps from form builder.
+        """
+        program = self.get_object()
+        
+        # Get the program's custom form if it exists
+        custom_form = program.forms.filter(is_default=True).first()
+        
+        # Static steps structure
+        static_steps = [
+            {
+                'step': 1,
+                'title': 'Guardian Information',
+                'description': 'Parent or guardian details',
+                'editable': False,
+                'fields': [
+                    {'name': 'first_name', 'label': 'First Name', 'type': 'text', 'required': True},
+                    {'name': 'last_name', 'label': 'Last Name', 'type': 'text', 'required': True},
+                    {'name': 'email', 'label': 'Email Address', 'type': 'email', 'required': False},
+                    {'name': 'phone_number', 'label': 'Phone Number', 'type': 'tel', 'required': True},
+                    {'name': 'profession', 'label': 'Profession', 'type': 'text', 'required': False},
+                    {'name': 'address', 'label': 'Address', 'type': 'text', 'required': False},
+                ]
+            },
+            {
+                'step': 2,
+                'title': 'Participant Information',
+                'description': 'Details of participants to register',
+                'editable': False,
+                'fields': [
+                    {'name': 'participants', 'label': 'Participants', 'type': 'participant_list', 'required': True},
+                ]
+            }
+        ]
+        
+        # Dynamic steps from custom form
+        dynamic_steps = []
+        if custom_form:
+            # Group fields by step (using order ranges)
+            fields_by_step = {}
+            for field in custom_form.fields.all().order_by('order'):
+                step_num = (field.order // 100) + 3  # Start from step 3
+                if step_num not in fields_by_step:
+                    fields_by_step[step_num] = []
+                fields_by_step[step_num].append({
+                    'name': field.field_name,
+                    'label': field.label,
+                    'type': field.field_type,
+                    'required': field.is_required,
+                    'help_text': field.help_text,
+                    'options': field.options,
+                    'max_length': field.max_length,
+                    'min_value': field.min_value,
+                    'max_value': field.max_value,
+                    'allowed_file_types': field.allowed_file_types,
+                    'max_file_size': field.max_file_size,
+                    'conditional_logic': field.conditional_logic,
+                })
+            
+            for step_num in sorted(fields_by_step.keys()):
+                dynamic_steps.append({
+                    'step': step_num,
+                    'title': f'Additional Information {step_num - 2}',
+                    'description': 'Program-specific requirements',
+                    'editable': True,
+                    'fields': fields_by_step[step_num]
+                })
+        
+        return Response({
+            'program': {
+                'id': program.id,
+                'name': program.name,
+                'description': program.description,
+                'registration_fee': program.registration_fee,
+                'age_min': program.age_min,
+                'age_max': program.age_max,
+                'category_label': program.category_label,
+                'category_options': program.category_options,
+            },
+            'form_structure': {
+                'static_steps': static_steps,
+                'dynamic_steps': dynamic_steps,
+                'total_steps': len(static_steps) + len(dynamic_steps)
+            }
+        })
+
+    @action(detail=True, methods=['post'], url_path='register')
+    def hybrid_register(self, request, pk=None):
+        """
+        Handle hybrid registration with static + dynamic form data.
+        """
+        program = self.get_object()
+        
+        # Add program to request data
+        data = request.data.copy()
+        data['program'] = program.id
+        
+        serializer = HybridRegistrationSerializer(data=data, context={'request': request})
+        if serializer.is_valid():
+            result = serializer.save()
+            return Response(result, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     @action(detail=True, methods=['get'], url_path='dashboard')
     def program_dashboard(self, request, pk=None):
