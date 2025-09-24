@@ -46,6 +46,7 @@ INSTALLED_APPS = [
     'core',
     'register.apps.RegisterConfig',
     'scores',
+    'gallery',
     'blog.apps.BlogConfig',
 
     "debug_toolbar",
@@ -73,6 +74,22 @@ CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
     'https://app.wokober.com',
     'https://woko-app.netlify.app',
+]
+
+# Allow credentials for CORS requests (required for withCredentials: true)
+CORS_ALLOW_CREDENTIALS = True
+
+# Allow specific headers
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
 ]
 
 

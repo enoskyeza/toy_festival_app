@@ -1,11 +1,15 @@
-import os
-from django.conf import settings
+# Current models.py
 from io import BytesIO
+
+from django.conf import settings
 from django.core.files import File
+from decimal import Decimal
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 from django.core.validators import EmailValidator, MinLengthValidator
+from django.core.exceptions import ValidationError
 from datetime import datetime
+from django.utils.text import slugify
 
 import qrcode
 from PIL import Image
@@ -71,29 +75,14 @@ class Contestant(BaseModel):
             self.age_category = None
 
     def save(self, *args, **kwargs):
-        if self.payment_status == 'paid' and not self.identifier:
+        self.set_age_category()
+        if self.payment_status == self.PaymentStatus.PAID and not self.identifier:
+            super().save(*args, **kwargs)
             current_year = datetime.now().year % 100
-            self.identifier = f'TF{current_year}{self.id:03d}'
-            self.set_age_category()
-            super().save(*args, **kwargs)
+            self.identifier = f"TF{current_year}{self.id:03d}"
+            self.__class__.objects.filter(pk=self.pk).update(identifier=self.identifier)
         else:
-            self.set_age_category()
             super().save(*args, **kwargs)
-
-
-    # def save(self, *args, **kwargs):
-    #     if not self.pk and not self.identifier:
-    #         super().save(*args, **kwargs)  # Save to generate an ID
-    #
-    #         current_year = datetime.now().year % 100
-    #         self.identifier = f'TF{current_year}{self.id:03d}'
-    #
-    #         if self.identifier is not None:
-    #             self.set_age_category()
-    #             self.save()  # Save again to store the identifier
-    #     else:
-    #         self.set_age_category()
-    #         super().save(*args, **kwargs)
 
 
     def __str__(self):
@@ -261,6 +250,10 @@ class Participant(BaseModel):
         """
         from django.utils import timezone
         today = timezone.now().date()
+
+        if not self.date_of_birth:
+            return None
+
         dob = self.date_of_birth
         age = today.year - dob.year - ((today.month, today.day) < (dob.month, dob.day))
         return age
@@ -345,6 +338,42 @@ class Program(BaseModel):
         default=True,
         help_text=_('Whether program participation is still active')
     )
+    
+    # Additional fields from frontend form
+    long_description = models.TextField(blank=True, null=True, help_text=_("Detailed program description"))
+    level = models.CharField(
+        max_length=20,
+        choices=[
+            ('beginner', 'Beginner'),
+            ('intermediate', 'Intermediate'),
+            ('advanced', 'Advanced'),
+        ],
+        blank=True,
+        null=True,
+        help_text=_("Skill level required")
+    )
+    thumbnail_url = models.URLField(blank=True, null=True, help_text=_("Thumbnail image URL"))
+    video_url = models.URLField(blank=True, null=True, help_text=_("Preview video URL"))
+    instructor = models.CharField(max_length=200, blank=True, null=True, help_text=_("Instructor name"))
+    featured = models.BooleanField(default=False, help_text=_("Whether this is a featured program"))
+
+    # Registration categorisation (optional)
+    category_label = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text=_("Label shown on forms for participant categorisation (e.g. 'Age Group').")
+    )
+    category_options = models.JSONField(
+        default=list,
+        blank=True,
+        help_text=_("List of allowed category values (e.g. ['6-9 years', '10-13 years']). Leave empty for free text.")
+    )
+    
+    # JSON fields for curriculum data
+    modules = models.JSONField(default=list, blank=True, help_text=_("List of curriculum modules"))
+    learning_outcomes = models.JSONField(default=list, blank=True, help_text=_("List of learning outcomes"))
+    requirements = models.JSONField(default=list, blank=True, help_text=_("List of prerequisites and requirements"))
 
 
     class Meta:
@@ -354,6 +383,116 @@ class Program(BaseModel):
 
     def __str__(self):
         return self.name
+
+
+class ProgramForm(models.Model):
+    """
+    A logical form structure tied to a program, like "Junior Form" or "Adult Form".
+    """
+    program = models.ForeignKey(Program, on_delete=models.CASCADE, related_name='forms')
+    title = models.CharField(max_length=255)
+    description = models.TextField(blank=True)
+    slug = models.SlugField(unique=True)
+    is_default = models.BooleanField(default=False, help_text="Used when auto-selecting forms")
+    age_min = models.PositiveIntegerField(blank=True, null=True)
+    age_max = models.PositiveIntegerField(blank=True, null=True)
+
+    class Meta:
+        unique_together = ('program', 'title')
+        ordering = ['program', 'age_min']
+
+    def __str__(self):
+        return f"{self.program.name} – {self.title}"
+
+    def save(self, *args, **kwargs):
+        if not self.slug:
+            base = slugify(self.title)
+            slug = base
+            counter = 1
+            while ProgramForm.objects.filter(slug=slug).exists():
+                slug = f"{base}-{counter}"
+                counter += 1
+            self.slug = slug
+        super().save(*args, **kwargs)
+
+
+class FormField(models.Model):
+    """
+    Field within a ProgramForm, supports conditional display logic.
+    """
+    FIELD_TYPES = [
+        ('text', 'Text Input'),
+        ('textarea', 'Text Area'),
+        ('email', 'Email'),
+        ('number', 'Number'),
+        ('date', 'Date'),
+        ('dropdown', 'Dropdown'),
+        ('radio', 'Radio Button'),
+        ('checkbox', 'Checkbox'),
+        ('file', 'File Upload'),
+        ('url', 'URL'),
+        ('phone', 'Phone'),
+    ]
+
+    form = models.ForeignKey(ProgramForm, on_delete=models.CASCADE, related_name='fields')
+    field_name = models.CharField(max_length=100)
+    label = models.CharField(max_length=255)
+    field_type = models.CharField(max_length=20, choices=FIELD_TYPES)
+    is_required = models.BooleanField(default=False)
+    help_text = models.TextField(blank=True)
+    order = models.PositiveIntegerField(default=0)
+    options = models.JSONField(blank=True, null=True, help_text="Used for dropdown/radio/checkbox")
+    max_length = models.PositiveIntegerField(null=True, blank=True)
+    min_value = models.FloatField(null=True, blank=True)
+    max_value = models.FloatField(null=True, blank=True)
+    allowed_file_types = models.JSONField(blank=True, null=True)
+    max_file_size = models.PositiveIntegerField(blank=True, null=True)
+    conditional_logic = models.JSONField(blank=True, null=True, help_text="Rules for showing this field")
+
+    class Meta:
+        ordering = ['order', 'id']
+        unique_together = ['form', 'field_name']
+
+    def __str__(self):
+        return f"{self.form.title}: {self.label}"
+
+    def clean(self):
+        if self.field_type in ['dropdown', 'radio'] and not self.options:
+            raise ValidationError(f"{self.field_type} fields must include options.")
+        if self.field_type not in ['dropdown', 'radio', 'checkbox'] and self.options:
+            raise ValidationError(f"{self.field_type} should not have options.")
+        if self.field_type == 'number' and self.min_value is not None and self.max_value is not None:
+            if self.min_value >= self.max_value:
+                raise ValidationError("Minimum value must be less than maximum value.")
+
+
+class FormResponse(models.Model):
+    form = models.ForeignKey(ProgramForm, on_delete=models.CASCADE, related_name='responses')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True)
+
+    def __str__(self):
+        return f"Response {self.id} to {self.form.title}"
+
+
+class FormResponseEntry(models.Model):
+    response = models.ForeignKey(FormResponse, on_delete=models.CASCADE, related_name='entries')
+    field = models.ForeignKey(FormField, on_delete=models.CASCADE)
+    value = models.TextField(blank=True)
+    file_upload = models.FileField(upload_to='form_uploads/', null=True, blank=True)
+
+    def __str__(self):
+        return f"{self.response} - {self.field.field_name}"
+
+    def clean(self):
+        if self.field.field_type == 'file':
+            if not self.file_upload:
+                raise ValidationError("File upload required for this field")
+        else:
+            if not self.value:
+                raise ValidationError("Non-file fields require a value")
 
 
 class Registration(BaseModel):
@@ -398,6 +537,13 @@ class Registration(BaseModel):
         choices=Status.choices,
         default=Status.PENDING
     )
+    category_value = models.CharField(
+        max_length=120,
+        blank=True,
+        null=True,
+        help_text=_("Participant-chosen category for this program (matches Program.category_options if provided).")
+    )
+
 
     class Meta:
         verbose_name = _('Registration')
@@ -405,16 +551,14 @@ class Registration(BaseModel):
         unique_together = (('participant', 'program'),)
         ordering = ['-created_at']
 
-    # def save(self, *args, **kwargs):
-    #     # On initial save, compute age_at_enrollment
-    #     if not self.pk:
-    #         dob = self.participant.date_of_birth
-    #         enrolled_date = self.registered_at.date() if self.registered_at else timezone.now().date()
-    #         self.age_at_enrollment = (
-    #             enrolled_date.year - dob.year
-    #             - ((enrolled_date.month, enrolled_date.day) < (dob.month, dob.day))
-    #         )
-    #     super().save(*args, **kwargs)
+
+    @property
+    def amount_due(self) -> Decimal:
+        fee = self.program.registration_fee or Decimal('0')
+        paid = self.approvals.aggregate(
+            total=models.Sum('amount')
+        )['total'] or Decimal('0')
+        return fee - paid
 
     def __str__(self):
         return f"{self.participant} @ {self.program}"
@@ -490,7 +634,7 @@ class Coupon(BaseModel):
 class Approval(BaseModel):
     """
     Records a staff action on a Registration: marking it Paid, Cancelled, or Refunded.
-    Handles post-processing to update related models (Registration, Receipt, Ticket, Coupon).
+    Handles post-processing to update related models (Registration, Receipt, Coupon).
     """
     class Status(models.TextChoices):
         PAID      = 'paid',      _('Paid')
@@ -506,25 +650,27 @@ class Approval(BaseModel):
         max_length=10,
         choices=Status.choices
     )
-    created_by     = models.ForeignKey(
+    amount = models.DecimalField(
+        max_digits=8, decimal_places=2,
+        null=True, blank=True,
+        help_text="Portion of the registration fee paid in this approval."
+    )
+    created_by   = models.ForeignKey(
         'accounts.User',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approvals'
     )
     receipt      = models.OneToOneField(
         'Receipt',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approval'
     )
     coupon       = models.OneToOneField(
         'Coupon',
         on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
+        null=True, blank=True,
         related_name='approval'
     )
 
@@ -536,45 +682,60 @@ class Approval(BaseModel):
     def __str__(self):
         return f"Approval({self.status}) for {self.registration}"
 
+    def save(self, *args, **kwargs):
+        # Default unpaid amount → full balance at save time
+        if self.status == self.Status.PAID and self.amount is None:
+            full_due = self.registration.amount_due
+            self.amount = full_due if full_due > Decimal('0') else Decimal('0')
+        super().save(*args, **kwargs)
+
     def post_process(self):
         reg = self.registration
-        old = reg.status
+        old_status = reg.status
 
-        # ——— Validation: only sensible transitions ———
-        if self.status == self.Status.CANCELLED and old == self.Status.PAID:
+        # ——— Valid transitions ———
+        if self.status == self.Status.CANCELLED and old_status == self.Status.PAID:
             raise ValidationError("Cannot cancel a registration that is already paid.")
-        if self.status == self.Status.PAID and old == self.Status.CANCELLED:
-            raise ValidationError("Cannot mark cancelled registration as paid.")
-        if self.status == self.Status.REFUNDED and old != self.Status.PAID:
+        if self.status == self.Status.PAID and old_status == self.Status.CANCELLED:
+            raise ValidationError("Cannot mark a cancelled registration as paid.")
+        if self.status == self.Status.REFUNDED and old_status != self.Status.PAID:
             raise ValidationError("Only paid registrations can be refunded.")
-        # ——— end validations ———
+        # ——— End validations ———
 
         # Idempotent guard
-        if old == self.status:
+        if old_status == self.status:
             return
 
-        # Apply to Registration
+        # Update registration status
         reg.status = self.status
         reg.save(update_fields=['status'])
 
-        # Handle side‑effects
+        # Side-effects
         if self.status == self.Status.PAID:
-            # 1) create receipt
+            paid_amount = self.amount
+            if paid_amount > reg.amount_due:
+                raise ValidationError("Cannot pay more than the amount due.")
+
+            # Create receipt
             receipt = Receipt.objects.create(
                 registration=reg,
                 issued_by=self.created_by,
-                amount=reg.program.registration_fee,
+                amount=paid_amount,
                 status=Receipt.Status.PAID
             )
             self.receipt = receipt
 
-            # 2) ticket if needed
-            if reg.program.requires_ticket:
-                ticket = Coupon.objects.create(registration=reg, status=Coupon.Status.PAID)
-                self.coupon = ticket
+            # Issue coupon only if fully paid and none exists
+            if reg.program.requires_ticket and reg.amount_due == Decimal('0'):
+                if not hasattr(reg, 'coupon'):
+                    coupon = Coupon.objects.create(
+                        registration=reg,
+                        status=Coupon.Status.PAID
+                    )
+                    self.coupon = coupon
 
         elif self.status == self.Status.REFUNDED:
-            # mark receipt & ticket refunded
+            # Refund any linked receipt & coupon
             if self.receipt:
                 self.receipt.status = Receipt.Status.REFUNDED
                 self.receipt.save(update_fields=['status'])
@@ -582,6 +743,14 @@ class Approval(BaseModel):
                 self.coupon.status = Coupon.Status.REFUNDED
                 self.coupon.save(update_fields=['status'])
 
-        # save Approval links
-        self.save(update_fields=['receipt', 'coupon'])
+        # Persist updated foreign-keys on this Approval
+        update_fields = []
+        if self.receipt_id:
+            update_fields.append('receipt')
+        if self.coupon_id:
+            update_fields.append('coupon')
+        if update_fields:
+            self.save(update_fields=update_fields)
+
         return self
+

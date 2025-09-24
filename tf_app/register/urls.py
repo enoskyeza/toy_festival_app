@@ -3,7 +3,8 @@ from rest_framework import routers
 from .views import (
     PaymentViewSet, ContestantViewSet, ParentViewSet, TicketViewSet,
     SchoolViewSet, GuardianViewSet,ParticipantViewSet, ProgramTypeViewSet,
-    ProgramViewSet, RegistrationViewSet, SelfRegistrationAPIView, ReceiptViewSet
+    ProgramViewSet, RegistrationViewSet, SelfRegistrationAPIView, ReceiptViewSet,
+    ApprovalViewSet
 )
 
 router = routers.DefaultRouter()
@@ -15,9 +16,11 @@ router.register(r'tickets', TicketViewSet)
 router.register(r'schools', SchoolViewSet)
 router.register(r'guardians', GuardianViewSet)
 router.register(r'participants', ParticipantViewSet)
+router.register(r'program-types', ProgramTypeViewSet)
 router.register(r'programs', ProgramViewSet)
 router.register(r'registrations', RegistrationViewSet)
 router.register(r'receipts', ReceiptViewSet)
+router.register(r'approvals', ApprovalViewSet)
 
 
 

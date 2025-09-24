@@ -74,6 +74,7 @@ class RegistrationFilter(CreatedAtFilter):
     status        = django_filters.ChoiceFilter(choices=Registration.Status.choices)
     program       = django_filters.NumberFilter(field_name='program_id', lookup_expr='exact')
     program__type = django_filters.NumberFilter(field_name='program__type_id', lookup_expr='exact')
+    category_value = django_filters.CharFilter(field_name='category_value', lookup_expr='iexact')
 
     class Meta(CreatedAtFilter.Meta):
         model = Registration
@@ -82,6 +83,7 @@ class RegistrationFilter(CreatedAtFilter):
             "program",
             "program__type",
             "participant",
+            "category_value",
         ]
 
 
@@ -114,5 +116,4 @@ class CouponFilter(CreatedAtFilter):
         model = Participant
         # No extra exact lookups needed here; created_from/to cover date filter.
         fields = []
-
 
