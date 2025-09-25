@@ -138,9 +138,10 @@ class FormFieldInline(admin.StackedInline):
 
 @admin.register(ProgramForm)
 class ProgramFormAdmin(admin.ModelAdmin):
-    list_display = ('id', 'program', 'title', 'slug', 'is_default', 'age_min', 'age_max')
-    list_filter = ('program', 'is_default')
+    list_display = ('id', 'program', 'title', 'slug', 'is_default', 'is_active', 'age_min', 'age_max')
+    list_filter = ('program', 'is_default', 'is_active')
     search_fields = ('title', 'slug', 'program__name')
+    list_editable = ('is_active',)
     readonly_fields = ('slug',)
     inlines = [FormFieldInline]
 

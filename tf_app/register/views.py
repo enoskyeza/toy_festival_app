@@ -5,6 +5,8 @@ from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
 import logging
 
+logger = logging.getLogger(__name__)
+
 from rest_framework import viewsets, filters, status
 from rest_framework.permissions import AllowAny, IsAuthenticated, IsAuthenticatedOrReadOnly
 from rest_framework.views import APIView
@@ -89,7 +91,7 @@ class SchoolViewSet(viewsets.ModelViewSet):
     """CRUD for schools"""
     queryset = School.objects.all()
     serializer_class = SchoolSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
     filter_backends = [
         DjangoFilterBackend,
@@ -172,7 +174,7 @@ class ProgramTypeViewSet(viewsets.ModelViewSet):
     """CRUD for program types/categories"""
     queryset = ProgramType.objects.all().order_by('name')
     serializer_class = ProgramTypeSerializer
-    permission_classes = []  # Allow all operations for now
+    permission_classes = [AllowAny]  # Allow all operations for now
 
 
 class ProgramViewSet(viewsets.ModelViewSet):
@@ -181,7 +183,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
         'type'
     ).order_by('name')
     serializer_class = ProgramSerializer
-    permission_classes = []  # Allow all operations for now
+    permission_classes = [AllowAny]  # Public access as requested
 
     filter_backends = [
         DjangoFilterBackend,
@@ -259,7 +261,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                     # Skip forms that cause errors
                     continue
             
-            return Response({
+            response_data = {
                 'stats': {
                     'total_programs': total_programs,
                     'active_programs': active_programs,
@@ -268,19 +270,61 @@ class ProgramViewSet(viewsets.ModelViewSet):
                 },
                 'programs': programs_data,
                 'forms': forms_data
-            })
+            }
+            
+            return Response(response_data)
+            
         except Exception as e:
-            # Return basic stats if there are any database issues
-            return Response({
-                'stats': {
-                    'total_programs': 0,
-                    'active_programs': 0,
-                    'total_enrollments': 0,
-                    'total_form_submissions': 0
-                },
-                'programs': [],
-                'forms': []
-            })
+            logger.error(f"Dashboard stats error: {str(e)}")
+            return Response(
+                {'error': 'Failed to fetch dashboard statistics'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['get'], url_path='forms')
+    def get_program_forms(self, request, pk=None):
+        """
+        Get all forms associated with a specific program
+        """
+        try:
+            program = self.get_object()
+            forms = ProgramForm.objects.filter(program=program).select_related('program').prefetch_related('fields')
+
+            forms_data = []
+            for form in forms:
+                # Count form responses/submissions
+                try:
+                    submissions_count = FormResponse.objects.filter(form=form).count()
+                except:
+                    submissions_count = 0
+
+                # Count form fields
+                try:
+                    fields_count = form.fields.count()
+                except:
+                    fields_count = 0
+
+                forms_data.append({
+                    'id': str(form.id),
+                    'name': form.title,
+                    'description': form.description or '',
+                    'fields': fields_count,
+                    'submissions': submissions_count,
+                    'is_active': form.is_active,
+                    'isActive': form.is_active,  # Both formats for compatibility
+                    'is_default': form.is_default,
+                    'createdAt': form.created_at.isoformat() if hasattr(form, 'created_at') else None,
+                    'steps': []  # TODO: Add form steps structure if needed
+                })
+
+            return Response(forms_data)
+
+        except Exception as e:
+            logger.error(f"Get program forms error: {str(e)}")
+            return Response(
+                {'error': 'Failed to fetch program forms'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     @action(detail=True, methods=['get'], url_path='registration-form')
     def get_registration_form(self, request, pk=None):
@@ -290,8 +334,8 @@ class ProgramViewSet(viewsets.ModelViewSet):
         """
         program = self.get_object()
         
-        # Get the program's custom form if it exists
-        custom_form = program.forms.filter(is_default=True).first()
+        # Get the program's active form for registration
+        custom_form = ProgramForm.get_active_form_for_program(program)
         
         # Static steps structure
         static_steps = [
@@ -527,7 +571,7 @@ class RegistrationViewSet(viewsets.ModelViewSet):
         'guardian_at_registration'
     ).select_related('coupon').prefetch_related('receipts', 'approvals').order_by('-created_at')
     serializer_class = RegistrationSerializer
-    permission_classes = [IsAuthenticatedOrReadOnly]
+    permission_classes = [AllowAny]
 
     filter_backends = [
         DjangoFilterBackend,
@@ -590,13 +634,55 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
 
 
+    @action(detail=True, methods=['post'], url_path='forms/(?P<form_id>[^/.]+)/set-active')
+    def set_active_form(self, request, pk=None, form_id=None):
+        """
+        Set a specific form as active for the program.
+        Only one form can be active per program for registration.
+        """
+        try:
+            program = self.get_object()
+            
+            # Validate that the form belongs to this program
+            try:
+                target_form = ProgramForm.objects.get(id=form_id, program=program)
+            except ProgramForm.DoesNotExist:
+                return Response(
+                    {'error': 'Form not found or does not belong to this program'}, 
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Deactivate all forms for this program
+            ProgramForm.objects.filter(program=program).update(is_active=False)
+            
+            # Activate the specified form
+            target_form.is_active = True
+            target_form.save()
+            
+            logger.info(f"Form '{target_form.title}' set as active for program '{program.name}'")
+            
+            return Response({
+                'success': True, 
+                'message': f'Form "{target_form.title}" is now the active form for registration',
+                'active_form_id': target_form.id,
+                'active_form_title': target_form.title
+            })
+            
+        except Exception as e:
+            logger.error(f"Set active form error: {str(e)}")
+            return Response(
+                {'error': 'Failed to set active form'}, 
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
 class ApprovalViewSet(viewsets.ModelViewSet):
     """
     Create payments/refunds on a Registration via Approval records.
     """
     queryset = Approval.objects.all()
     serializer_class = ApprovalSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         user = self.request.user
@@ -613,6 +699,7 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
     queryset = ProgramForm.objects.all().select_related('program').prefetch_related('fields')
     serializer_class = ProgramFormSerializer
     lookup_field = 'slug'
+    permission_classes = [AllowAny]
 
     def get_serializer_class(self):
         # Use write serializer for creates/updates, read serializer otherwise
@@ -624,9 +711,16 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         queryset = super().get_queryset()
         program_slug = self.kwargs.get('program_slug')
+        program_id = self.request.query_params.get('program')
+        
         if program_slug:
             return queryset.filter(program__slug=program_slug)
-        return queryset.none()
+        elif program_id:
+            # Support filtering by program ID for flat endpoint access
+            return queryset.filter(program_id=program_id)
+        
+        # Return all forms for flat route access
+        return queryset
 
     @action(detail=True, methods=['get'])
     def structure(self, request, program_slug=None, slug=None):
