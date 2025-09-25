@@ -394,8 +394,11 @@ class ProgramForm(models.Model):
     description = models.TextField(blank=True)
     slug = models.SlugField(unique=True)
     is_default = models.BooleanField(default=False, help_text="Used when auto-selecting forms")
+    is_active = models.BooleanField(default=False, help_text="Active form for program registration")
     age_min = models.PositiveIntegerField(blank=True, null=True)
     age_max = models.PositiveIntegerField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         unique_together = ('program', 'title')
@@ -414,6 +417,23 @@ class ProgramForm(models.Model):
                 counter += 1
             self.slug = slug
         super().save(*args, **kwargs)
+    
+    @classmethod
+    def get_active_form_for_program(cls, program):
+        """
+        Get the active form for a program.
+        Returns the active form or None if no active form exists.
+        """
+        try:
+            return cls.objects.get(program=program, is_active=True)
+        except cls.DoesNotExist:
+            return None
+        except cls.MultipleObjectsReturned:
+            # If somehow multiple active forms exist, return the first one and log warning
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.warning(f"Multiple active forms found for program {program.id}. Using the first one.")
+            return cls.objects.filter(program=program, is_active=True).first()
 
 
 class FormField(models.Model):

@@ -588,7 +588,7 @@ class ProgramFormSerializer(serializers.ModelSerializer):
         model = ProgramForm
         fields = [
             'id', 'program', 'title', 'description', 'slug',
-            'is_default', 'age_min', 'age_max', 'fields'
+            'is_default', 'is_active', 'age_min', 'age_max', 'fields'
         ]
         read_only_fields = ['id', 'slug']
 
@@ -610,7 +610,7 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProgramForm
         fields = [
-            'id', 'program', 'title', 'description', 'slug', 'is_default',
+            'id', 'program', 'title', 'description', 'slug', 'is_default', 'is_active',
             'age_min', 'age_max', 'fields'
         ]
         read_only_fields = ['id', 'slug']

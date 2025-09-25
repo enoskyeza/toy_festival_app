@@ -4,7 +4,7 @@ from .views import (
     PaymentViewSet, ContestantViewSet, ParentViewSet, TicketViewSet,
     SchoolViewSet, GuardianViewSet,ParticipantViewSet, ProgramTypeViewSet,
     ProgramViewSet, RegistrationViewSet, SelfRegistrationAPIView, ReceiptViewSet,
-    ApprovalViewSet
+    ApprovalViewSet, ProgramFormViewSet
 )
 
 router = routers.DefaultRouter()
@@ -21,6 +21,7 @@ router.register(r'programs', ProgramViewSet)
 router.register(r'registrations', RegistrationViewSet)
 router.register(r'receipts', ReceiptViewSet)
 router.register(r'approvals', ApprovalViewSet)
+router.register(r'program_forms', ProgramFormViewSet)
 
 
 
