@@ -3,6 +3,7 @@
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 import logging
 
 logger = logging.getLogger(__name__)
@@ -200,6 +201,19 @@ class ProgramViewSet(viewsets.ModelViewSet):
     ordering = ['created_at']
     # pagination_class = CustomPagination
 
+    def destroy(self, request, *args, **kwargs):
+        """
+        Soft delete: mark the program inactive instead of deleting from DB.
+        """
+        try:
+            instance = self.get_object()
+            instance.active = False
+            instance.save(update_fields=["active"])
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Exception as e:
+            logger.error(f"Soft delete program error: {str(e)}")
+            return Response({"error": "Failed to delete program"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     @action(detail=False, methods=['get'], url_path='dashboard-stats')
     def dashboard_stats(self, request):
         """
@@ -326,6 +340,70 @@ class ProgramViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+    @action(detail=True, methods=['post'], url_path='forms/(?P<form_id>[^/.]+)/set-active')
+    def set_active_form(self, request, pk=None, form_id=None):
+        """Set a specific form as the active registration form for this program."""
+        try:
+            program = self.get_object()
+
+            try:
+                target_form = ProgramForm.objects.get(id=form_id, program=program)
+            except ProgramForm.DoesNotExist:
+                return Response(
+                    {'error': 'Form not found or does not belong to this program'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            with transaction.atomic():
+                ProgramForm.objects.filter(program=program).update(is_active=False)
+                target_form.is_active = True
+                target_form.save(update_fields=['is_active'])
+
+            logger.info("Form '%s' set as active for program '%s'", target_form.title, program.name)
+
+            return Response({
+                'success': True,
+                'message': f'Form "{target_form.title}" is now the active form for registration',
+                'active_form_id': target_form.id,
+                'active_form_title': target_form.title
+            })
+
+        except Exception as exc:
+            logger.error("Set active form error: %s", exc)
+            return Response(
+                {'error': 'Failed to set active form'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+    @action(detail=True, methods=['post'], url_path='forms/(?P<form_id>[^/.]+)/inactivate')
+    def inactivate_form(self, request, pk=None, form_id=None):
+        """Mark the specified form as inactive without activating another."""
+        try:
+            program = self.get_object()
+            try:
+                target_form = ProgramForm.objects.get(id=form_id, program=program)
+            except ProgramForm.DoesNotExist:
+                return Response(
+                    {'error': 'Form not found or does not belong to this program'},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+
+            target_form.is_active = False
+            target_form.save(update_fields=['is_active'])
+
+            return Response({
+                'success': True,
+                'message': f'Form "{target_form.title}" has been inactivated',
+                'inactivated_form_id': target_form.id
+            })
+
+        except Exception as exc:
+            logger.error("Inactivate form error: %s", exc)
+            return Response(
+                {'error': 'Failed to inactivate form'},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
     @action(detail=True, methods=['get'], url_path='registration-form')
     def get_registration_form(self, request, pk=None):
         """
@@ -386,6 +464,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                     'allowed_file_types': field.allowed_file_types,
                     'max_file_size': field.max_file_size,
                     'conditional_logic': field.conditional_logic,
+                    'per_participant': True,
                 })
             
             for step_num in sorted(fields_by_step.keys()):
@@ -394,6 +473,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                     'title': f'Additional Information {step_num - 2}',
                     'description': 'Program-specific requirements',
                     'editable': True,
+                    'per_participant': True,
                     'fields': fields_by_step[step_num]
                 })
         
@@ -634,48 +714,6 @@ class ReceiptViewSet(viewsets.ModelViewSet):
     pagination_class = CustomPagination
 
 
-    @action(detail=True, methods=['post'], url_path='forms/(?P<form_id>[^/.]+)/set-active')
-    def set_active_form(self, request, pk=None, form_id=None):
-        """
-        Set a specific form as active for the program.
-        Only one form can be active per program for registration.
-        """
-        try:
-            program = self.get_object()
-            
-            # Validate that the form belongs to this program
-            try:
-                target_form = ProgramForm.objects.get(id=form_id, program=program)
-            except ProgramForm.DoesNotExist:
-                return Response(
-                    {'error': 'Form not found or does not belong to this program'}, 
-                    status=status.HTTP_404_NOT_FOUND
-                )
-            
-            # Deactivate all forms for this program
-            ProgramForm.objects.filter(program=program).update(is_active=False)
-            
-            # Activate the specified form
-            target_form.is_active = True
-            target_form.save()
-            
-            logger.info(f"Form '{target_form.title}' set as active for program '{program.name}'")
-            
-            return Response({
-                'success': True, 
-                'message': f'Form "{target_form.title}" is now the active form for registration',
-                'active_form_id': target_form.id,
-                'active_form_title': target_form.title
-            })
-            
-        except Exception as e:
-            logger.error(f"Set active form error: {str(e)}")
-            return Response(
-                {'error': 'Failed to set active form'}, 
-                status=status.HTTP_500_INTERNAL_SERVER_ERROR
-            )
-
-
 class ApprovalViewSet(viewsets.ModelViewSet):
     """
     Create payments/refunds on a Registration via Approval records.
@@ -698,7 +736,7 @@ class ApprovalViewSet(viewsets.ModelViewSet):
 class ProgramFormViewSet(viewsets.ModelViewSet):
     queryset = ProgramForm.objects.all().select_related('program').prefetch_related('fields')
     serializer_class = ProgramFormSerializer
-    lookup_field = 'slug'
+    # Use default pk lookup so /forms/{id}/ works
     permission_classes = [AllowAny]
 
     def get_serializer_class(self):
@@ -727,6 +765,44 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
         form = self.get_object()
         serializer = ProgramFormSerializer(form)
         return Response(serializer.data)
+
+    @action(detail=True, methods=['post'], url_path='set-active')
+    def set_active_flat(self, request, pk=None):
+        """
+        Set this form as active; deactivate other forms under the same program.
+        """
+        try:
+            form = self.get_object()
+            with transaction.atomic():
+                ProgramForm.objects.filter(program=form.program).update(is_active=False)
+                form.is_active = True
+                form.save(update_fields=['is_active'])
+            return Response({
+                'success': True,
+                'message': f'Form "{form.title}" is now active',
+                'active_form_id': form.id,
+            })
+        except Exception as e:
+            logger.error(f"Flat set active form error: {str(e)}")
+            return Response({'error': 'Failed to set active form'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    @action(detail=True, methods=['post'], url_path='inactivate')
+    def inactivate_flat(self, request, pk=None):
+        """
+        Inactivate this specific form without activating another one.
+        """
+        try:
+            form = self.get_object()
+            form.is_active = False
+            form.save(update_fields=['is_active'])
+            return Response({
+                'success': True,
+                'message': f'Form "{form.title}" has been inactivated',
+                'inactivated_form_id': form.id,
+            })
+        except Exception as e:
+            logger.error(f"Flat inactivate form error: {str(e)}")
+            return Response({'error': 'Failed to inactivate form'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'])
     def submit(self, request, program_slug=None, slug=None):

@@ -1,3 +1,5 @@
+import json
+
 from django.shortcuts import get_object_or_404
 from django.db import transaction
 from datetime import date
@@ -381,8 +383,9 @@ class SelfRegistrationSerializer(serializers.Serializer):
         guardian = RegistrationUtils.get_or_create_guardian(guardian_data)
         successes = []
         failures = []
+        registration_records = []
 
-        for pdata in participants_data:
+        for index, pdata in enumerate(participants_data):
             full_name = f"{pdata['first_name'].strip()} {pdata['last_name'].strip()}"
             school_data = pdata.pop('school_at_registration')
             school = RegistrationUtils.get_or_create_school(school_data)
@@ -491,6 +494,7 @@ class HybridRegistrationSerializer(serializers.Serializer):
         guardian = RegistrationUtils.get_or_create_guardian(guardian_data)
         successes = []
         failures = []
+        registration_records = []
 
         for pdata in participants_data:
             full_name = f"{pdata['first_name'].strip()} {pdata['last_name'].strip()}"
@@ -520,14 +524,17 @@ class HybridRegistrationSerializer(serializers.Serializer):
                         'category_value': category_value,
                     }
                 )
-                
+
                 if not created and category_value and reg.category_value != category_value:
                     reg.category_value = category_value
                     reg.save(update_fields=['category_value'])
 
-                # Handle custom form fields if provided
-                if custom_fields_data and created:
-                    self._handle_custom_fields(program, participant, custom_fields_data)
+                registration_records.append({
+                    'index': index,
+                    'registration': reg,
+                    'created': created,
+                    'participant': participant,
+                })
 
                 if created:
                     successes.append({
@@ -546,39 +553,107 @@ class HybridRegistrationSerializer(serializers.Serializer):
                     'reason': str(exc)
                 })
 
+        if custom_fields_data:
+            self._handle_custom_fields(program, registration_records, custom_fields_data)
+
         return {
             'guardian': f"{guardian.first_name} {guardian.last_name}",
             'participants': successes,
             'report': failures
         }
 
-    def _handle_custom_fields(self, program: Program, participant: Participant, custom_fields: dict):
+    def _handle_custom_fields(self, program: Program, registrations: list, custom_fields: dict):
         """
         Handle custom form field submissions.
         """
-        # Get the program's default form
-        custom_form = program.forms.filter(is_default=True).first()
+        # Prefer active form, fall back to default if none active
+        custom_form = program.forms.filter(is_active=True).first()
+        if not custom_form:
+            custom_form = program.forms.filter(is_default=True).first()
         if not custom_form:
             return
 
-        # Create form response
-        response = FormResponse.objects.create(
-            form=custom_form,
-            submitted_by=self.context.get('request').user if self.context.get('request') and self.context.get('request').user.is_authenticated else None,
-            ip_address=self.context.get('request').META.get('REMOTE_ADDR') if self.context.get('request') else None,
-            user_agent=self.context.get('request').META.get('HTTP_USER_AGENT', '') if self.context.get('request') else '',
-        )
+        field_map = {field.field_name: field for field in custom_form.fields.all()}
 
-        # Create form response entries
-        for field in custom_form.fields.all():
-            field_value = custom_fields.get(field.field_name)
-            if field_value is not None:
-                entry = FormResponseEntry(
-                    response=response,
-                    field=field,
-                    value=str(field_value) if not isinstance(field_value, str) else field_value
-                )
-                entry.save()
+        if isinstance(custom_fields, dict):
+            if 'per_participant' in custom_fields or 'participants' in custom_fields:
+                per_participant_data = custom_fields.get('per_participant') or custom_fields.get('participants') or []
+                per_participant = {}
+                for entry in per_participant_data:
+                    if not isinstance(entry, dict):
+                        continue
+                    idx = entry.get('participant_index')
+                    values = entry.get('values') or entry.get('data') or {}
+                    if idx is None:
+                        continue
+                    try:
+                        per_participant[int(idx)] = values or {}
+                    except (TypeError, ValueError):
+                        continue
+                global_values = custom_fields.get('global') or custom_fields.get('shared') or {}
+            else:
+                global_values = custom_fields
+                per_participant = {}
+        else:
+            global_values = {}
+            per_participant = {}
+
+        request = self.context.get('request')
+        submitted_by = None
+        ip_address = None
+        user_agent = ''
+        if request:
+            submitted_by = request.user if request.user.is_authenticated else None
+            ip_address = request.META.get('REMOTE_ADDR')
+            user_agent = request.META.get('HTTP_USER_AGENT', '')
+
+        for record in registrations:
+            registration = record.get('registration')
+            index = record.get('index')
+            if registration is None or index is None:
+                continue
+
+            values = {}
+            if isinstance(global_values, dict):
+                values.update(global_values)
+            participant_values = per_participant.get(index)
+            if isinstance(participant_values, dict):
+                values.update(participant_values)
+
+            filtered_values = {k: v for k, v in values.items() if k in field_map}
+            if not filtered_values:
+                continue
+
+            # Remove previous responses for this registration/form combination to avoid duplicates
+            registration.form_responses.filter(form=custom_form).delete()
+
+            response = FormResponse.objects.create(
+                form=custom_form,
+                registration=registration,
+                submitted_by=submitted_by,
+                ip_address=ip_address,
+                user_agent=user_agent,
+            )
+
+            for field_name, raw_value in filtered_values.items():
+                field = field_map[field_name]
+                entry_kwargs = {
+                    'response': response,
+                    'field': field,
+                }
+
+                if field.field_type == 'file' and raw_value is not None and hasattr(raw_value, 'read'):
+                    entry_kwargs['file_upload'] = raw_value
+                    entry_kwargs['value'] = raw_value.name
+                else:
+                    if isinstance(raw_value, (dict, list)):
+                        entry_kwargs['value'] = json.dumps(raw_value)
+                    elif raw_value is None:
+                        entry_kwargs['value'] = ''
+                    else:
+                        entry_kwargs['value'] = str(raw_value)
+
+                FormResponseEntry.objects.create(**entry_kwargs)
 
 
 class ProgramFormSerializer(serializers.ModelSerializer):
@@ -625,6 +700,50 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
             FormField.objects.create(form=program_form, **fdata)
             order_counter += 1
         return program_form
+
+    def update(self, instance, validated_data):
+        fields_data = validated_data.pop('fields', None)
+
+        with transaction.atomic():
+            for attr, value in validated_data.items():
+                setattr(instance, attr, value)
+            instance.save()
+
+            if fields_data is not None:
+                existing_fields = {field.field_name: field for field in instance.fields.all()}
+                seen_field_names = set()
+                order_counter = 1
+
+                for field_payload in fields_data:
+                    payload = field_payload.copy()
+                    field_name = payload.get('field_name')
+                    if not field_name:
+                        continue
+
+                    incoming_order = payload.get('order') or order_counter
+                    payload['order'] = incoming_order
+                    order_counter += 1
+
+                    field_instance = existing_fields.get(field_name)
+                    if field_instance:
+                        for key, value in payload.items():
+                            if key in {'id', 'form'}:
+                                continue
+                            setattr(field_instance, key, value)
+                        field_instance.save()
+                    else:
+                        payload.pop('id', None)
+                        payload.pop('form', None)
+                        FormField.objects.create(form=instance, **payload)
+
+                    seen_field_names.add(field_name)
+
+                # Remove fields that were omitted from payload
+                for field_name, field_instance in existing_fields.items():
+                    if field_name not in seen_field_names:
+                        field_instance.delete()
+
+        return instance
 
 
 class DynamicFormSubmissionSerializer(serializers.Serializer):

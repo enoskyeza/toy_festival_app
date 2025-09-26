@@ -488,13 +488,15 @@ class FormField(models.Model):
 
 class FormResponse(models.Model):
     form = models.ForeignKey(ProgramForm, on_delete=models.CASCADE, related_name='responses')
+    registration = models.ForeignKey('register.Registration', on_delete=models.CASCADE, related_name='form_responses', null=True, blank=True)
     submitted_at = models.DateTimeField(auto_now_add=True)
     submitted_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL)
     ip_address = models.GenericIPAddressField(null=True, blank=True)
     user_agent = models.TextField(blank=True)
 
     def __str__(self):
-        return f"Response {self.id} to {self.form.title}"
+        target = f"Registration {self.registration_id}" if self.registration_id else 'anonymous'
+        return f"Response {self.id} to {self.form.title} ({target})"
 
 
 class FormResponseEntry(models.Model):
@@ -773,4 +775,3 @@ class Approval(BaseModel):
             self.save(update_fields=update_fields)
 
         return self
-
