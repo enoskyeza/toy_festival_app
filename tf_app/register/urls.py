@@ -22,6 +22,7 @@ router.register(r'registrations', RegistrationViewSet)
 router.register(r'receipts', ReceiptViewSet)
 router.register(r'approvals', ApprovalViewSet)
 router.register(r'program_forms', ProgramFormViewSet)
+router.register(r'forms', ProgramFormViewSet, basename='forms')
 
 
 
