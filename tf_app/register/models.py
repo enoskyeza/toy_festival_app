@@ -399,6 +399,8 @@ class ProgramForm(models.Model):
     age_max = models.PositiveIntegerField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    step_metadata = models.JSONField(default=list, blank=True, help_text=_("Ordered step definitions for dynamic fields"))
+    layout_config = models.JSONField(default=dict, blank=True, help_text=_("Global layout configuration for dynamic steps"))
 
     class Meta:
         unique_together = ('program', 'title')
@@ -468,6 +470,8 @@ class FormField(models.Model):
     allowed_file_types = models.JSONField(blank=True, null=True)
     max_file_size = models.PositiveIntegerField(blank=True, null=True)
     conditional_logic = models.JSONField(blank=True, null=True, help_text="Rules for showing this field")
+    step_key = models.CharField(max_length=120, blank=True, default='', help_text="Identifier of the step this field belongs to")
+    column_span = models.PositiveSmallIntegerField(default=4, help_text="Width of the field within a 4-column grid (1-4)")
 
     class Meta:
         ordering = ['order', 'id']
@@ -484,6 +488,8 @@ class FormField(models.Model):
         if self.field_type == 'number' and self.min_value is not None and self.max_value is not None:
             if self.min_value >= self.max_value:
                 raise ValidationError("Minimum value must be less than maximum value.")
+        if self.column_span < 1 or self.column_span > 4:
+            raise ValidationError("Column span must be between 1 and 4.")
 
 
 class FormResponse(models.Model):

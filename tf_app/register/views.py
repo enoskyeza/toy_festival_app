@@ -17,7 +17,12 @@ from rest_framework.decorators import action
 from decimal import Decimal
 
 from .models import ProgramForm, FormResponse, FormResponseEntry
-from .serializers import ProgramFormSerializer, DynamicFormSubmissionSerializer, HybridRegistrationSerializer
+from .serializers import (
+    ProgramFormSerializer,
+    ProgramFormStructureSerializer,
+    DynamicFormSubmissionSerializer,
+    HybridRegistrationSerializer,
+)
 
 from .serializers import (
     PaymentSerializer, ContestantSerializer, ParentSerializer,
@@ -445,13 +450,10 @@ class ProgramViewSet(viewsets.ModelViewSet):
         # Dynamic steps from custom form
         dynamic_steps = []
         if custom_form:
-            # Group fields by step (using order ranges)
-            fields_by_step = {}
-            for field in custom_form.fields.all().order_by('order'):
-                step_num = (field.order // 100) + 3  # Start from step 3
-                if step_num not in fields_by_step:
-                    fields_by_step[step_num] = []
-                fields_by_step[step_num].append({
+            fields_by_key = {}
+            for field in custom_form.fields.all().order_by('order', 'id'):
+                step_key = field.step_key or 'dynamic-step-1'
+                fields_by_key.setdefault(step_key, []).append({
                     'name': field.field_name,
                     'label': field.label,
                     'type': field.field_type,
@@ -465,18 +467,41 @@ class ProgramViewSet(viewsets.ModelViewSet):
                     'max_file_size': field.max_file_size,
                     'conditional_logic': field.conditional_logic,
                     'per_participant': True,
+                    'column_span': field.column_span,
                 })
-            
-            for step_num in sorted(fields_by_step.keys()):
-                dynamic_steps.append({
-                    'step': step_num,
-                    'title': f'Additional Information {step_num - 2}',
-                    'description': 'Program-specific requirements',
-                    'editable': True,
-                    'per_participant': True,
-                    'fields': fields_by_step[step_num]
-                })
-        
+
+            metadata = custom_form.step_metadata or []
+            if metadata:
+                ordered_meta = sorted(
+                    [step for step in metadata if isinstance(step, dict)],
+                    key=lambda step: step.get('order', 0)
+                )
+                base_index = len(static_steps)
+                for idx, meta in enumerate(ordered_meta, start=1):
+                    step_key = meta.get('key') or f'step-{idx}'
+                    step_number = base_index + idx
+                    dynamic_steps.append({
+                        'step': step_number,
+                        'title': meta.get('title') or f'Additional Information {idx}',
+                        'description': meta.get('description', ''),
+                        'editable': True,
+                        'per_participant': meta.get('per_participant', True),
+                        'fields': fields_by_key.pop(step_key, []),
+                    })
+
+            # Any remaining steps without metadata fallback to sequential order
+            if fields_by_key:
+                base_index = len(static_steps) + len(dynamic_steps)
+                for offset, (step_key, fields) in enumerate(sorted(fields_by_key.items()), start=1):
+                    dynamic_steps.append({
+                        'step': base_index + offset,
+                        'title': f'Additional Information {base_index + offset - len(static_steps)}',
+                        'description': '',
+                        'editable': True,
+                        'per_participant': True,
+                        'fields': fields,
+                    })
+
         return Response({
             'program': {
                 'id': program.id,
@@ -720,7 +745,7 @@ class ApprovalViewSet(viewsets.ModelViewSet):
     """
     queryset = Approval.objects.all()
     serializer_class = ApprovalSerializer
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
         user = self.request.user
@@ -761,9 +786,9 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
         return queryset
 
     @action(detail=True, methods=['get'])
-    def structure(self, request, program_slug=None, slug=None):
+    def structure(self, request, pk=None, program_slug=None, slug=None):
         form = self.get_object()
-        serializer = ProgramFormSerializer(form)
+        serializer = ProgramFormStructureSerializer(form, context={'request': request})
         return Response(serializer.data)
 
     @action(detail=True, methods=['post'], url_path='set-active')
@@ -805,7 +830,7 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
             return Response({'error': 'Failed to inactivate form'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=True, methods=['post'])
-    def submit(self, request, program_slug=None, slug=None):
+    def submit(self, request, pk=None, program_slug=None, slug=None):
         form = self.get_object()
         serializer = DynamicFormSubmissionSerializer(data=request.data, form=form)
         serializer.is_valid(raise_exception=True)
