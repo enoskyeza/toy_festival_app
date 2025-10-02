@@ -963,6 +963,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                     'is_static': False,
                     'per_participant': meta.get('per_participant', True),
                     'layout': meta.get('layout') or {'columns': 4},
+                    'conditional_logic': meta.get('conditional_logic') or None,
                     'fields': step_fields,
                 })
                 fields_by_step.pop(key, None)
@@ -985,6 +986,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                 'is_static': False,
                 'per_participant': True,
                 'layout': {'columns': 4},
+                'conditional_logic': None,
                 'fields': fields,
             })
         return fallback_steps
@@ -1149,8 +1151,40 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
                 'order': step.get('order', index),
                 'per_participant': step.get('per_participant', True),
                 'layout': step.get('layout') or {},
+                'conditional_logic': self._clean_conditional_logic(step.get('conditional_logic') or step.get('conditionalLogic')),
             })
         return normalized
+
+    def _clean_conditional_logic(self, raw):
+        if not raw or not isinstance(raw, dict):
+            return None
+
+        rules = raw.get('rules')
+        if not isinstance(rules, list):
+            return None
+
+        cleaned_rules = []
+        for rule in rules:
+            if not isinstance(rule, dict):
+                continue
+            field = (rule.get('field') or '').strip()
+            op = rule.get('op')
+            if not field or not op:
+                continue
+            cleaned_rules.append({
+                'field': field,
+                'op': op,
+                'value': rule.get('value'),
+            })
+
+        if not cleaned_rules:
+            return None
+
+        mode = raw.get('mode') if raw.get('mode') in ('all', 'any') else 'all'
+        return {
+            'mode': mode,
+            'rules': cleaned_rules,
+        }
 
     def _build_field_layout_map(self, steps_data):
         mapping = {}

@@ -486,6 +486,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'description': meta.get('description', ''),
                         'editable': True,
                         'per_participant': meta.get('per_participant', True),
+                        'conditional_logic': meta.get('conditional_logic') or None,
                         'fields': fields_by_key.pop(step_key, []),
                     })
 
@@ -499,6 +500,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'description': '',
                         'editable': True,
                         'per_participant': True,
+                        'conditional_logic': None,
                         'fields': fields,
                     })
 
