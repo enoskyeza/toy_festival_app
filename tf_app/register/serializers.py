@@ -1,4 +1,6 @@
 import json
+from collections import defaultdict
+from copy import deepcopy
 
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -328,8 +330,12 @@ class ApprovalSerializer(serializers.ModelSerializer):
         return amt
 
     def create(self, validated_data):
-        print('SUBMITTED DATA: ', validated_data)
-        user = self.context['request'].user
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if not user or not user.is_authenticated:
+            raise serializers.ValidationError({'detail': 'Authentication is required to perform approvals.'})
+        if not getattr(user, 'is_staff', False):
+            raise serializers.ValidationError({'detail': 'Only staff members can record approvals.'})
         validated_data['created_by'] = user
         approval = super().create(validated_data)
         approval.post_process()
@@ -392,6 +398,13 @@ class SelfRegistrationSerializer(serializers.Serializer):
             participant = RegistrationUtils.get_or_create_participant(pdata, guardian, school)
 
             category_value = (pdata.get('category_value') or '').strip() or None
+            if getattr(program, 'category_label', None) and not category_value:
+                raise serializers.ValidationError({
+                    'participants': [{
+                        'full_name': full_name,
+                        'category_value': f"{program.category_label} is required."
+                    }]
+                })
             if program.category_options and category_value and category_value not in program.category_options:
                 raise serializers.ValidationError({
                     'participants': [{
@@ -456,7 +469,8 @@ class FormFieldSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'form', 'field_name', 'label', 'field_type', 'is_required',
             'help_text', 'order', 'options', 'max_length', 'min_value',
-            'max_value', 'allowed_file_types', 'max_file_size', 'conditional_logic'
+            'max_value', 'allowed_file_types', 'max_file_size', 'conditional_logic',
+            'step_key', 'column_span'
         ]
         read_only_fields = ['id']
 
@@ -496,13 +510,20 @@ class HybridRegistrationSerializer(serializers.Serializer):
         failures = []
         registration_records = []
 
-        for pdata in participants_data:
+        for index, pdata in enumerate(participants_data):
             full_name = f"{pdata['first_name'].strip()} {pdata['last_name'].strip()}"
             school_data = pdata.pop('school_at_registration')
             school = RegistrationUtils.get_or_create_school(school_data)
             participant = RegistrationUtils.get_or_create_participant(pdata, guardian, school)
 
             category_value = (pdata.get('category_value') or '').strip() or None
+            if getattr(program, 'category_label', None) and not category_value:
+                raise serializers.ValidationError({
+                    'participants': [{
+                        'full_name': full_name,
+                        'category_value': f"{program.category_label} is required."
+                    }]
+                })
             if program.category_options and category_value and category_value not in program.category_options:
                 raise serializers.ValidationError({
                     'participants': [{
@@ -668,51 +689,411 @@ class ProgramFormSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'slug']
 
 
+class ProgramFormStructureSerializer(serializers.ModelSerializer):
+    """Return a unified structure combining static and dynamic fields."""
+
+    fields = serializers.SerializerMethodField(method_name='get_combined_fields')
+    steps = serializers.SerializerMethodField()
+    layout_config = serializers.SerializerMethodField()
+
+    STATIC_GUARDIAN_TEMPLATE = [
+        {
+            'id': 'guardian-first-name',
+            'field_name': 'guardian_first_name',
+            'label': 'First Name',
+            'field_type': 'text',
+            'is_required': True,
+            'help_text': '',
+            'order': 1,
+            'options': None,
+            'column_span': 2,
+            'step_key': 'static-guardian',
+        },
+        {
+            'id': 'guardian-last-name',
+            'field_name': 'guardian_last_name',
+            'label': 'Last Name',
+            'field_type': 'text',
+            'is_required': True,
+            'help_text': '',
+            'order': 2,
+            'options': None,
+            'column_span': 2,
+            'step_key': 'static-guardian',
+        },
+        {
+            'id': 'guardian-email',
+            'field_name': 'guardian_email',
+            'label': 'Email Address',
+            'field_type': 'email',
+            'is_required': False,
+            'help_text': '',
+            'order': 3,
+            'options': None,
+            'column_span': 2,
+            'step_key': 'static-guardian',
+        },
+        {
+            'id': 'guardian-phone',
+            'field_name': 'guardian_phone',
+            'label': 'Phone Number',
+            'field_type': 'phone',
+            'is_required': True,
+            'help_text': '',
+            'order': 4,
+            'options': None,
+            'column_span': 2,
+            'step_key': 'static-guardian',
+        },
+        {
+            'id': 'guardian-profession',
+            'field_name': 'guardian_profession',
+            'label': 'Profession',
+            'field_type': 'text',
+            'is_required': False,
+            'help_text': '',
+            'order': 5,
+            'options': None,
+            'column_span': 2,
+            'step_key': 'static-guardian',
+        },
+        {
+            'id': 'guardian-address',
+            'field_name': 'guardian_address',
+            'label': 'Address',
+            'field_type': 'text',
+            'is_required': False,
+            'help_text': '',
+            'order': 6,
+            'options': None,
+            'column_span': 4,
+            'step_key': 'static-guardian',
+        },
+    ]
+
+    STATIC_PARTICIPANT_TEMPLATE = [
+        {
+            'id': 'participants-list',
+            'field_name': 'participants_list',
+            'label': 'Participants (Multiple participants can be added)',
+            'field_type': 'text',
+            'is_required': True,
+            'help_text': '',
+            'order': 101,
+            'options': None,
+            'column_span': 4,
+            'step_key': 'static-participants',
+        },
+        {
+            'id': 'participant-school',
+            'field_name': 'participant_school',
+            'label': 'School (Search and select or add new)',
+            'field_type': 'text',
+            'is_required': True,
+            'help_text': '',
+            'order': 102,
+            'options': None,
+            'column_span': 4,
+            'step_key': 'static-participants',
+        },
+    ]
+
+    class Meta:
+        model = ProgramForm
+        fields = [
+            'id', 'program', 'title', 'description', 'slug', 'is_default', 'is_active',
+            'age_min', 'age_max', 'fields', 'steps', 'layout_config'
+        ]
+        read_only_fields = ['id', 'slug']
+
+    def get_combined_fields(self, obj):
+        static_fields = self._build_static_field_entries(obj)
+        dynamic_fields = self._build_dynamic_field_entries(obj)
+        all_fields = static_fields + dynamic_fields
+        return sorted(all_fields, key=lambda item: item.get('order', 0))
+
+    def get_steps(self, obj):
+        static_steps = self._build_static_steps(obj)
+        dynamic_fields = self._build_dynamic_field_entries(obj)
+        dynamic_steps = self._build_dynamic_steps(obj, dynamic_fields)
+        steps = static_steps + dynamic_steps
+        return sorted(steps, key=lambda step: step.get('order', 0))
+
+    def get_layout_config(self, obj):
+        layout = obj.layout_config or {}
+        if not layout.get('columns'):
+            layout['columns'] = 4
+        return layout
+
+    def _build_static_field_entries(self, obj):
+        guardian_fields = deepcopy(self.STATIC_GUARDIAN_TEMPLATE)
+        participant_fields = deepcopy(self.STATIC_PARTICIPANT_TEMPLATE)
+
+        static_fields = []
+        for field in guardian_fields + participant_fields:
+            field_entry = {
+                **field,
+                'options': field.get('options') or None,
+                'is_static': True,
+            }
+            static_fields.append(field_entry)
+
+        program = obj.program
+        if getattr(program, 'category_label', None):
+            category_field = {
+                'id': 'participant-category',
+                'field_name': 'participant_category',
+                'label': program.category_label,
+                'field_type': 'dropdown',
+                'is_required': True,
+                'help_text': f"Select {program.category_label.lower()}",
+                'order': 103,
+                'options': program.category_options or [],
+                'is_static': True,
+                'column_span': 4,
+                'step_key': 'static-participants',
+            }
+            static_fields.append(category_field)
+
+        return static_fields
+
+    def _build_dynamic_field_entries(self, obj):
+        fields = []
+        default_step_key = self._default_dynamic_step_key(obj)
+        for field in obj.fields.all().order_by('order', 'id'):
+            order_value = field.order or 0
+            if order_value < 200:
+                order_value = order_value + 200
+            field_entry = {
+                'id': field.id,
+                'field_name': field.field_name,
+                'label': field.label,
+                'field_type': field.field_type,
+                'is_required': field.is_required,
+                'help_text': field.help_text,
+                'order': order_value,
+                'options': field.options,
+                'max_length': field.max_length,
+                'min_value': field.min_value,
+                'max_value': field.max_value,
+                'allowed_file_types': field.allowed_file_types,
+                'max_file_size': field.max_file_size,
+                'conditional_logic': field.conditional_logic,
+                'is_static': False,
+                'step_key': field.step_key or default_step_key,
+                'column_span': field.column_span or 4,
+            }
+            fields.append(field_entry)
+        return fields
+
+    def _build_static_steps(self, obj):
+        guardian_fields = [
+            {**field, 'is_static': True}
+            for field in deepcopy(self.STATIC_GUARDIAN_TEMPLATE)
+        ]
+        participant_fields = [
+            {**field, 'is_static': True}
+            for field in deepcopy(self.STATIC_PARTICIPANT_TEMPLATE)
+        ]
+
+        program = obj.program
+        if getattr(program, 'category_label', None):
+            participant_fields.append({
+                'id': 'participant-category',
+                'field_name': 'participant_category',
+                'label': program.category_label,
+                'field_type': 'dropdown',
+                'is_required': True,
+                'help_text': f"Select {program.category_label.lower()}",
+                'order': 103,
+                'options': program.category_options or [],
+                'is_static': True,
+                'column_span': 4,
+                'step_key': 'static-participants',
+            })
+
+        return [
+            {
+                'key': 'static-guardian',
+                'title': 'Guardian Information',
+                'description': 'Parent or guardian details',
+                'order': 1,
+                'is_static': True,
+                'per_participant': False,
+                'layout': {'columns': 4},
+                'fields': guardian_fields,
+            },
+            {
+                'key': 'static-participants',
+                'title': 'Participant Information',
+                'description': 'Details of participants to register',
+                'order': 2,
+                'is_static': True,
+                'per_participant': True,
+                'layout': {'columns': 4},
+                'fields': participant_fields,
+            },
+        ]
+
+    def _build_dynamic_steps(self, obj, dynamic_fields):
+        if not dynamic_fields:
+            return []
+
+        steps_metadata = obj.step_metadata or []
+        fields_by_step = defaultdict(list)
+        for field in dynamic_fields:
+            step_key = field.get('step_key') or self._default_dynamic_step_key(obj)
+            fields_by_step[step_key].append(deepcopy(field))
+
+        dynamic_steps = []
+        if steps_metadata:
+            sorted_metadata = sorted(
+                [meta for meta in steps_metadata if isinstance(meta, dict)],
+                key=lambda m: m.get('order', 0)
+            )
+            offset = 2  # static steps occupy first positions
+            for index, meta in enumerate(sorted_metadata, start=1):
+                key = meta.get('key') or f'step-{index}'
+                step_fields = fields_by_step.get(key, [])
+                dynamic_steps.append({
+                    'key': key,
+                    'title': meta.get('title') or f'Additional Information {index}',
+                    'description': meta.get('description', ''),
+                    'order': offset + meta.get('order', index),
+                    'is_static': False,
+                    'per_participant': meta.get('per_participant', True),
+                    'layout': meta.get('layout') or {'columns': 4},
+                    'fields': step_fields,
+                })
+                fields_by_step.pop(key, None)
+
+        # Handle any fields without matching metadata by grouping on order buckets
+        if fields_by_step:
+            fallback_steps = self._fallback_steps_from_fields(fields_by_step)
+            dynamic_steps.extend(fallback_steps)
+
+        return dynamic_steps
+
+    def _fallback_steps_from_fields(self, fields_by_step):
+        fallback_steps = []
+        for index, (step_key, fields) in enumerate(sorted(fields_by_step.items()), start=1):
+            fallback_steps.append({
+                'key': step_key or f'step-{index}',
+                'title': f'Additional Information {index}',
+                'description': '',
+                'order': 2 + index,
+                'is_static': False,
+                'per_participant': True,
+                'layout': {'columns': 4},
+                'fields': fields,
+            })
+        return fallback_steps
+
+    def _default_dynamic_step_key(self, obj):
+        steps_metadata = obj.step_metadata or []
+        for meta in steps_metadata:
+            if isinstance(meta, dict) and not meta.get('is_static'):
+                return meta.get('key')
+        return 'dynamic-step-1'
+
+
 class FormFieldWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = FormField
         fields = [
             'id', 'field_name', 'label', 'field_type', 'is_required',
             'help_text', 'order', 'options', 'max_length', 'min_value',
-            'max_value', 'allowed_file_types', 'max_file_size', 'conditional_logic'
+            'max_value', 'allowed_file_types', 'max_file_size', 'conditional_logic',
+            'step_key', 'column_span'
         ]
         read_only_fields = ['id']
 
 
 class ProgramFormWriteSerializer(serializers.ModelSerializer):
     fields = FormFieldWriteSerializer(many=True, write_only=True)
+    steps = serializers.ListField(child=serializers.DictField(), required=False, write_only=True)
+    layout_config = serializers.JSONField(required=False)
 
     class Meta:
         model = ProgramForm
         fields = [
             'id', 'program', 'title', 'description', 'slug', 'is_default', 'is_active',
-            'age_min', 'age_max', 'fields'
+            'age_min', 'age_max', 'layout_config', 'fields', 'steps'
         ]
         read_only_fields = ['id', 'slug']
 
     def create(self, validated_data):
+        steps_data = validated_data.pop('steps', [])
         fields_data = validated_data.pop('fields', [])
+        layout_config = validated_data.pop('layout_config', None)
+
+        field_layout_map = self._build_field_layout_map(steps_data)
+        normalized_steps = self._normalize_steps(steps_data)
+
         program_form = ProgramForm.objects.create(**validated_data)
+
+        updates = []
+        if layout_config is not None:
+            program_form.layout_config = layout_config or {}
+            updates.append('layout_config')
+        if normalized_steps is not None:
+            program_form.step_metadata = normalized_steps
+            updates.append('step_metadata')
+        if updates:
+            program_form.save(update_fields=updates)
+
         order_counter = 1
+        default_step_key = self._default_step_key(program_form.step_metadata)
+
         for fdata in fields_data:
-            if not fdata.get('order'):
-                fdata['order'] = order_counter
-            FormField.objects.create(form=program_form, **fdata)
+            payload = fdata.copy()
+            if not payload.get('order'):
+                payload['order'] = order_counter
             order_counter += 1
+
+            layout_info = field_layout_map.get(payload.get('field_name'))
+            if layout_info:
+                payload['step_key'] = layout_info.get('step_key', payload.get('step_key') or default_step_key)
+                payload['column_span'] = layout_info.get('column_span') or payload.get('column_span') or 4
+            else:
+                payload.setdefault('column_span', 4)
+                if not payload.get('step_key'):
+                    payload['step_key'] = default_step_key
+
+            FormField.objects.create(form=program_form, **payload)
+
         return program_form
 
     def update(self, instance, validated_data):
+        steps_data = validated_data.pop('steps', None)
         fields_data = validated_data.pop('fields', None)
+        layout_config = validated_data.pop('layout_config', None)
+
+        normalized_steps = None
+        if steps_data is not None:
+            normalized_steps = self._normalize_steps(steps_data)
+
+        field_layout_map = self._build_field_layout_map(steps_data)
 
         with transaction.atomic():
+            if layout_config is not None:
+                instance.layout_config = layout_config or {}
+            if normalized_steps is not None:
+                instance.step_metadata = normalized_steps
+
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
             instance.save()
 
             if fields_data is not None:
                 existing_fields = {field.field_name: field for field in instance.fields.all()}
+                existing_layout = {
+                    field.field_name: {'step_key': field.step_key, 'column_span': field.column_span}
+                    for field in existing_fields.values()
+                }
                 seen_field_names = set()
                 order_counter = 1
+                default_step_key = self._default_step_key(instance.step_metadata)
 
                 for field_payload in fields_data:
                     payload = field_payload.copy()
@@ -723,6 +1104,15 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
                     incoming_order = payload.get('order') or order_counter
                     payload['order'] = incoming_order
                     order_counter += 1
+
+                    layout_info = field_layout_map.get(field_name) or existing_layout.get(field_name)
+                    if layout_info:
+                        payload['step_key'] = layout_info.get('step_key', payload.get('step_key') or default_step_key)
+                        payload['column_span'] = layout_info.get('column_span') or payload.get('column_span') or 4
+                    else:
+                        payload.setdefault('column_span', 4)
+                        if not payload.get('step_key'):
+                            payload['step_key'] = default_step_key
 
                     field_instance = existing_fields.get(field_name)
                     if field_instance:
@@ -738,12 +1128,60 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
 
                     seen_field_names.add(field_name)
 
-                # Remove fields that were omitted from payload
                 for field_name, field_instance in existing_fields.items():
                     if field_name not in seen_field_names:
                         field_instance.delete()
 
         return instance
+
+    def _normalize_steps(self, steps_data):
+        if steps_data is None:
+            return None
+        normalized = []
+        for index, step in enumerate(steps_data, start=1):
+            if not isinstance(step, dict):
+                continue
+            key = step.get('key') or step.get('id') or f'step-{index}'
+            normalized.append({
+                'key': key,
+                'title': step.get('title') or f'Step {index}',
+                'description': step.get('description', ''),
+                'order': step.get('order', index),
+                'per_participant': step.get('per_participant', True),
+                'layout': step.get('layout') or {},
+            })
+        return normalized
+
+    def _build_field_layout_map(self, steps_data):
+        mapping = {}
+        if not steps_data:
+            return mapping
+        for step in steps_data:
+            if not isinstance(step, dict):
+                continue
+            step_key = step.get('key') or step.get('id')
+            if not step_key:
+                continue
+            for field in step.get('fields', []) or []:
+                if not isinstance(field, dict):
+                    continue
+                field_name = field.get('field_name') or field.get('name')
+                if not field_name:
+                    continue
+                mapping[field_name] = {
+                    'step_key': step_key,
+                    'column_span': field.get('column_span') or field.get('columnSpan'),
+                }
+        return mapping
+
+    def _default_step_key(self, step_metadata):
+        if not step_metadata:
+            return ''
+        for step in step_metadata:
+            if isinstance(step, dict) and not step.get('is_static'):
+                return step.get('key', '')
+        first = step_metadata[0]
+        return first.get('key', '') if isinstance(first, dict) else ''
 
 
 class DynamicFormSubmissionSerializer(serializers.Serializer):
