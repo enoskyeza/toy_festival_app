@@ -17,6 +17,9 @@ from PIL import Image
 from core.models import BaseModel
 
 
+#***********************************#
+#  INGORE LEGACY APP ARCHITECTURE   #
+#***********************************#
 class Payment(models.Model):
     class PaymentMethod(models.TextChoices):
         mobile_money = "mobile_money", _("Mobile Money")

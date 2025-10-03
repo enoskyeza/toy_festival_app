@@ -510,7 +510,7 @@ class HybridRegistrationSerializer(serializers.Serializer):
         failures = []
         registration_records = []
 
-        for pdata in participants_data:
+        for index, pdata in enumerate(participants_data):
             full_name = f"{pdata['first_name'].strip()} {pdata['last_name'].strip()}"
             school_data = pdata.pop('school_at_registration')
             school = RegistrationUtils.get_or_create_school(school_data)
