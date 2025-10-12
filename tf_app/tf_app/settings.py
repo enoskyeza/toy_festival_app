@@ -64,6 +64,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'tf_app.middleware.AuthenticationDebugMiddleware',  # Debug auth issues
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -90,6 +91,23 @@ CORS_ALLOW_HEADERS = [
     'user-agent',
     'x-csrftoken',
     'x-requested-with',
+]
+
+# CORS: Expose Authorization header for token-based auth
+CORS_EXPOSE_HEADERS = ['Authorization']
+
+# Session cookie settings for cross-origin requests
+SESSION_COOKIE_SAMESITE = 'None'  # Required for cross-origin cookies
+SESSION_COOKIE_SECURE = True  # Required when SameSite=None (HTTPS only)
+SESSION_COOKIE_HTTPONLY = True
+
+# CSRF cookie settings for cross-origin requests
+CSRF_COOKIE_SAMESITE = 'None'
+CSRF_COOKIE_SECURE = True
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3000',
+    'https://app.wokober.com',
+    'https://woko-app.netlify.app',
 ]
 
 

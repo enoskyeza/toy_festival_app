@@ -751,11 +751,14 @@ class ApprovalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        logger.info(f"ApprovalViewSet.get_queryset - User: {user}, Authenticated: {user.is_authenticated}, Is Staff: {user.is_staff}")
         if user.is_staff:
             return super().get_queryset()
         return Approval.objects.filter(created_by=user)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        logger.info(f"ApprovalViewSet.perform_create - User: {user}, Authenticated: {user.is_authenticated}")
         # The serializer.create() will set `created_by` and run post_process()
         serializer.save()
 
