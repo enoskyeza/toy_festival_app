@@ -308,13 +308,59 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 class ReceiptSerializer(serializers.ModelSerializer):
     registration = serializers.SerializerMethodField()
+    registration_id = serializers.IntegerField(source='registration.id', read_only=True)
+    issued_by_name = serializers.CharField(source='issued_by.get_full_name', read_only=True)
+    program_name = serializers.CharField(source='registration.program.name', read_only=True)
+    participant_name = serializers.SerializerMethodField()
+    registration_details = serializers.SerializerMethodField()
 
     class Meta:
         model = Receipt
-        fields = ['id', 'registration', 'status', 'issued_by', 'amount', 'created_at']
+        fields = [
+            'id', 'registration', 'registration_id', 'registration_details',
+            'status', 'issued_by', 'issued_by_name', 'amount', 
+            'program_name', 'participant_name', 'created_at', 'updated_at'
+        ]
 
     def get_registration(self, obj):
         return f"{obj.registration.participant} – {obj.registration.program}"
+    
+    def get_participant_name(self, obj):
+        participant = obj.registration.participant
+        return f"{participant.first_name} {participant.last_name}"
+    
+    def get_registration_details(self, obj):
+        """Return detailed registration info for receipt display"""
+        reg = obj.registration
+        participant = reg.participant
+        guardian = reg.guardian_at_registration
+        
+        data = {
+            'id': reg.id,
+            'participant': {
+                'id': participant.id,
+                'first_name': participant.first_name,
+                'last_name': participant.last_name,
+                'gender': participant.gender,
+            },
+            'program': reg.program.name,
+            'age_at_registration': reg.age_at_registration,
+            'status': reg.status,
+            'amount_due': str(reg.amount_due),
+        }
+        
+        if guardian:
+            data['guardian_at_registration'] = {
+                'id': guardian.id,
+                'first_name': guardian.first_name,
+                'last_name': guardian.last_name,
+                'phone_number': guardian.phone_number,
+                'email': guardian.email or '',
+                'address': guardian.address or '',
+                'profession': guardian.profession or '',
+            }
+        
+        return data
 
 
 class ApprovalSerializer(serializers.ModelSerializer):
