@@ -487,6 +487,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'editable': True,
                         'per_participant': meta.get('per_participant', True),
                         'fields': fields_by_key.pop(step_key, []),
+                        'conditional_logic': meta.get('conditional_logic') or None,
                     })
 
             # Any remaining steps without metadata fallback to sequential order
@@ -500,6 +501,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'editable': True,
                         'per_participant': True,
                         'fields': fields,
+                        'conditional_logic': None,
                     })
 
         return Response({
@@ -749,11 +751,14 @@ class ApprovalViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         user = self.request.user
+        logger.info(f"ApprovalViewSet.get_queryset - User: {user}, Authenticated: {user.is_authenticated}, Is Staff: {user.is_staff}")
         if user.is_staff:
             return super().get_queryset()
         return Approval.objects.filter(created_by=user)
 
     def perform_create(self, serializer):
+        user = self.request.user
+        logger.info(f"ApprovalViewSet.perform_create - User: {user}, Authenticated: {user.is_authenticated}")
         # The serializer.create() will set `created_by` and run post_process()
         serializer.save()
 

@@ -532,10 +532,11 @@ class Registration(BaseModel):
     including payment, age at enrollment, school snapshot, and responsible guardian.
     """
     class Status(models.TextChoices):
-        PENDING   = 'pending',   _('Pending')
-        PAID      = 'paid',      _('Paid')
-        CANCELLED = 'cancelled', _('Cancelled')
-        REFUNDED  = 'refunded',  _('Refunded')
+        PENDING       = 'pending',       _('Pending')
+        PARTIALLY_PAID= 'partially_paid',_('Partially Paid')
+        PAID          = 'paid',          _('Paid')
+        CANCELLED     = 'cancelled',     _('Cancelled')
+        REFUNDED      = 'refunded',      _('Refunded')
 
 
     participant = models.ForeignKey(
@@ -564,7 +565,7 @@ class Registration(BaseModel):
         null=True
     )
     status = models.CharField(
-        max_length=10,
+        max_length=20,  # Increased to accommodate 'partially_paid'
         choices=Status.choices,
         default=Status.PENDING
     )
@@ -725,29 +726,23 @@ class Approval(BaseModel):
         old_status = reg.status
 
         # ——— Valid transitions ———
-        if self.status == self.Status.CANCELLED and old_status == self.Status.PAID:
+        if self.status == self.Status.CANCELLED and old_status in [self.Status.PAID, Registration.Status.PAID]:
             raise ValidationError("Cannot cancel a registration that is already paid.")
-        if self.status == self.Status.PAID and old_status == self.Status.CANCELLED:
+        if self.status == self.Status.PAID and old_status in [self.Status.CANCELLED, Registration.Status.CANCELLED]:
             raise ValidationError("Cannot mark a cancelled registration as paid.")
-        if self.status == self.Status.REFUNDED and old_status != self.Status.PAID:
+        if self.status == self.Status.REFUNDED and old_status not in [self.Status.PAID, Registration.Status.PAID]:
             raise ValidationError("Only paid registrations can be refunded.")
         # ——— End validations ———
 
-        # Idempotent guard
-        if old_status == self.status:
-            return
-
-        # Update registration status
-        reg.status = self.status
-        reg.save(update_fields=['status'])
-
-        # Side-effects
+        # Side-effects for payment
         if self.status == self.Status.PAID:
             paid_amount = self.amount
-            if paid_amount > reg.amount_due:
+            amount_due_before = reg.amount_due
+            
+            if paid_amount > amount_due_before:
                 raise ValidationError("Cannot pay more than the amount due.")
 
-            # Create receipt
+            # Create receipt for this payment
             receipt = Receipt.objects.create(
                 registration=reg,
                 issued_by=self.created_by,
@@ -756,14 +751,35 @@ class Approval(BaseModel):
             )
             self.receipt = receipt
 
-            # Issue coupon only if fully paid and none exists
-            if reg.program.requires_ticket and reg.amount_due == Decimal('0'):
-                if not hasattr(reg, 'coupon'):
-                    coupon = Coupon.objects.create(
-                        registration=reg,
-                        status=Coupon.Status.PAID
-                    )
-                    self.coupon = coupon
+            # Calculate new amount due after this payment
+            # Re-fetch to get updated amount_due property
+            reg.refresh_from_db()
+            remaining_balance = reg.amount_due
+
+            # Determine new registration status
+            if remaining_balance <= Decimal('0'):
+                # Fully paid
+                reg.status = Registration.Status.PAID
+                
+                # Issue coupon/ticket only if fully paid and program requires it
+                if reg.program.requires_ticket:
+                    # Check if coupon doesn't already exist
+                    if not Coupon.objects.filter(registration=reg).exists():
+                        coupon = Coupon.objects.create(
+                            registration=reg,
+                            status=Coupon.Status.PAID
+                        )
+                        self.coupon = coupon
+            else:
+                # Partial payment - balance remains
+                reg.status = Registration.Status.PARTIALLY_PAID
+            
+            reg.save(update_fields=['status'])
+
+        elif self.status == self.Status.CANCELLED:
+            # Cancel registration
+            reg.status = Registration.Status.CANCELLED
+            reg.save(update_fields=['status'])
 
         elif self.status == self.Status.REFUNDED:
             # Refund any linked receipt & coupon
@@ -773,6 +789,9 @@ class Approval(BaseModel):
             if self.coupon:
                 self.coupon.status = Coupon.Status.REFUNDED
                 self.coupon.save(update_fields=['status'])
+            
+            reg.status = Registration.Status.REFUNDED
+            reg.save(update_fields=['status'])
 
         # Persist updated foreign-keys on this Approval
         update_fields = []
