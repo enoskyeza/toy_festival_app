@@ -487,6 +487,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'editable': True,
                         'per_participant': meta.get('per_participant', True),
                         'fields': fields_by_key.pop(step_key, []),
+                        'conditional_logic': meta.get('conditional_logic') or None,
                     })
 
             # Any remaining steps without metadata fallback to sequential order
@@ -500,6 +501,7 @@ class ProgramViewSet(viewsets.ModelViewSet):
                         'editable': True,
                         'per_participant': True,
                         'fields': fields,
+                        'conditional_logic': None,
                     })
 
         return Response({

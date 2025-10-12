@@ -922,6 +922,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                 'per_participant': False,
                 'layout': {'columns': 4},
                 'fields': guardian_fields,
+                'conditional_logic': None,
             },
             {
                 'key': 'static-participants',
@@ -932,6 +933,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                 'per_participant': True,
                 'layout': {'columns': 4},
                 'fields': participant_fields,
+                'conditional_logic': None,
             },
         ]
 
@@ -964,6 +966,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                     'per_participant': meta.get('per_participant', True),
                     'layout': meta.get('layout') or {'columns': 4},
                     'fields': step_fields,
+                    'conditional_logic': meta.get('conditional_logic') or None,
                 })
                 fields_by_step.pop(key, None)
 
@@ -986,6 +989,7 @@ class ProgramFormStructureSerializer(serializers.ModelSerializer):
                 'per_participant': True,
                 'layout': {'columns': 4},
                 'fields': fields,
+                'conditional_logic': None,
             })
         return fallback_steps
 
@@ -1149,6 +1153,7 @@ class ProgramFormWriteSerializer(serializers.ModelSerializer):
                 'order': step.get('order', index),
                 'per_participant': step.get('per_participant', True),
                 'layout': step.get('layout') or {},
+                'conditional_logic': step.get('conditional_logic') or None,
             })
         return normalized
 
