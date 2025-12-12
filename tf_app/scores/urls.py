@@ -5,7 +5,8 @@ from .views import (
     PointViewSet, BulkPointView, ParticipantCommentViewSet,
     RubricCategoryViewSet, RubricViewSet, RubricCriteriaViewSet,
     ScoringConfigurationViewSet, JudgeAssignmentViewSet,
-    JudgingScoreViewSet, ConflictOfInterestViewSet
+    JudgingScoreViewSet, ConflictOfInterestViewSet,
+    LeaderboardView, ProgramScoresSummaryView
 )
 
 # Set up the router
@@ -31,4 +32,6 @@ router.register(r'conflicts', ConflictOfInterestViewSet, basename='conflict')
 urlpatterns = [
     path('', include(router.urls)),
     path('upload-points/', BulkPointView.as_view(), name='bulk_point_upload'),
+    path('leaderboard/<int:program_id>/', LeaderboardView.as_view(), name='leaderboard'),
+    path('programs-summary/', ProgramScoresSummaryView.as_view(), name='programs_summary'),
 ]

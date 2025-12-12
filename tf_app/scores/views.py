@@ -488,3 +488,98 @@ class ConflictOfInterestViewSet(viewsets.ModelViewSet):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ['judge', 'participant', 'status', 'relationship_type']
     ordering_fields = ['flagged_at', 'reviewed_at']
+
+
+class LeaderboardView(views.APIView):
+    """
+    Get aggregated scores/leaderboard for a program.
+    Supports filtering by category and returns top 3 highlights.
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request, program_id=None):
+        from register.models import Program
+        from .services import ResultsService
+        
+        # Get program
+        try:
+            program = Program.objects.get(id=program_id)
+        except Program.DoesNotExist:
+            return Response(
+                {'error': f'Program with id {program_id} not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Get optional category filter
+        category_value = request.query_params.get('category', None)
+        
+        # Calculate leaderboard
+        results = ResultsService.calculate_leaderboard(
+            program, 
+            category_value=category_value,
+            use_cache=True
+        )
+        
+        # Prepare response with top 3 highlights
+        top_3 = results[:3] if len(results) >= 3 else results
+        
+        return Response({
+            'program_id': program.id,
+            'program_name': program.name,
+            'category_label': program.category_label,
+            'category_options': program.category_options or [],
+            'selected_category': category_value,
+            'total_participants': len(results),
+            'top_3': top_3,
+            'results': results
+        })
+
+
+class ProgramScoresSummaryView(views.APIView):
+    """
+    Get scores summary for all judgable programs.
+    Returns program list with basic scoring stats.
+    """
+    permission_classes = [AllowAny]
+    
+    def get(self, request):
+        from register.models import Program
+        
+        # Get all judgable programs
+        programs = Program.objects.filter(
+            active=True,
+            is_judgable=True
+        ).prefetch_related('judging_scores', 'registrations')
+        
+        program_summaries = []
+        for program in programs:
+            # Count scored registrations
+            scored_registrations = JudgingScore.objects.filter(
+                program=program
+            ).values('registration').distinct().count()
+            
+            # Count total eligible registrations (paid)
+            total_registrations = program.registrations.filter(
+                status='paid'
+            ).count()
+            
+            # Count unique judges who scored
+            judges_count = JudgingScore.objects.filter(
+                program=program
+            ).values('judge').distinct().count()
+            
+            program_summaries.append({
+                'id': program.id,
+                'name': program.name,
+                'category_label': program.category_label,
+                'category_options': program.category_options or [],
+                'has_categories': bool(program.category_options),
+                'total_registrations': total_registrations,
+                'scored_registrations': scored_registrations,
+                'judges_count': judges_count,
+                'scoring_progress': round((scored_registrations / total_registrations * 100), 1) if total_registrations > 0 else 0
+            })
+        
+        return Response({
+            'programs': program_summaries
+        })
