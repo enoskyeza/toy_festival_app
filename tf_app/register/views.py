@@ -25,8 +25,7 @@ from .serializers import (
 )
 
 from .serializers import (
-    PaymentSerializer, ContestantSerializer, ParentSerializer,
-    ParentCreateUpdateSerializer, TicketSerializer, SchoolSerializer,
+    SchoolSerializer,
     GuardianSerializer,
     ParticipantSerializer,
     ProgramTypeSerializer,
@@ -41,8 +40,8 @@ from .utils.filters import (
     ProgramTypeFilter, RegistrationFilter, ReceiptFilter, CouponFilter
 )
 from .models import (
-    Parent, Contestant, Payment, Ticket,  School, Guardian,
-    Participant, ProgramType, Program, Registration, Receipt, Approval, Coupon
+    School, Guardian, Participant, ProgramType, Program, 
+    Registration, Receipt, Approval, Coupon
 )
 from django.db.models import Count, Q, Sum, DecimalField, Value
 from django.db.models.functions import Coalesce
@@ -51,48 +50,7 @@ from .utils.pagination import CustomPagination
 
 
 
-# API VIEWS.
-class PaymentViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Payment.objects.all()
-    serializer_class = PaymentSerializer
-    permission_classes = [AllowAny]
-
-
-# Viewset for Contestant
-class ContestantViewSet(viewsets.ModelViewSet):
-    queryset = Contestant.objects.select_related('payment_method', 'parent').prefetch_related('scores')
-    serializer_class = ContestantSerializer
-    permission_classes = [AllowAny]
-
-
-# Viewset for Parent
-class ParentViewSet(viewsets.ModelViewSet):
-    queryset = Parent.objects.prefetch_related('contestants').all()
-    permission_classes = [AllowAny]
-
-    def get_serializer_class(self):
-        if self.action in ['create', 'update', 'partial_update']:
-            return ParentCreateUpdateSerializer
-        return ParentSerializer
-
-
-class TicketViewSet(viewsets.ReadOnlyModelViewSet):
-    """
-    A viewset for retrieving tickets.
-    """
-    queryset = Ticket.objects.select_related('participant')  # Optimize query with related participant
-    serializer_class = TicketSerializer
-    permission_classes = [AllowAny]
-
-    # def get_queryset(self):
-    #     """
-    #     Optionally filter tickets based on the current user.
-    #     """
-    #     # Filter by a specific participant if needed (e.g., based on user context or request data)
-    #     return super().get_queryset()
-
-
-# NEW ARCHITECTURE
+# NEW ARCHITECTURE - API VIEWS
 class SchoolViewSet(viewsets.ModelViewSet):
     """CRUD for schools"""
     queryset = School.objects.all()
@@ -205,6 +163,52 @@ class ProgramViewSet(viewsets.ModelViewSet):
     ordering_fields = '__all__'
     ordering = ['created_at']
     # pagination_class = CustomPagination
+    
+    @action(detail=False, methods=['get'], url_path='judgable')
+    def judgable(self, request):
+        """
+        Return only programs that are both active AND judgable.
+        For judge panel use only.
+        """
+        judgable_programs = Program.objects.filter(
+            active=True,
+            is_judgable=True
+        ).select_related('type').order_by('name')
+        
+        serializer = self.get_serializer(judgable_programs, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['get'], url_path='eligible-registrations')
+    def eligible_registrations(self, request, pk=None):
+        """
+        Returns only eligible registrations for judging based on program fee.
+        - If program is free (fee = 0): returns all registrations
+        - If program has a fee (fee > 0): returns only registrations with status = 'paid'
+        
+        Also includes scoring metadata for each registration.
+        """
+        program = self.get_object()
+        
+        # Base queryset with all necessary related data
+        queryset = Registration.objects.filter(program=program).select_related(
+            'participant',
+            'program',
+            'school_at_registration',
+            'guardian_at_registration'
+        ).prefetch_related('judging_scores', 'judging_scores__judge')
+        
+        # Apply eligibility filter based on program fee
+        if program.registration_fee and program.registration_fee > 0:
+            # Only include paid registrations for programs with fees
+            queryset = queryset.filter(status=Registration.Status.PAID)
+        # If free program, include all registrations (no additional filter)
+        
+        # Order by participant name for consistent display
+        queryset = queryset.order_by('participant__last_name', 'participant__first_name')
+        
+        # Serialize with full registration details
+        serializer = RegistrationSerializer(queryset, many=True, context={'request': request})
+        return Response(serializer.data)
 
     def destroy(self, request, *args, **kwargs):
         """
@@ -219,6 +223,20 @@ class ProgramViewSet(viewsets.ModelViewSet):
             logger.error(f"Soft delete program error: {str(e)}")
             return Response({"error": "Failed to delete program"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
+    @action(detail=False, methods=['get'], url_path='active-judgable')
+    def active_judgable(self, request):
+        """
+        Returns programs that are both active and judgable.
+        Used by judge panel to populate program dropdown.
+        """
+        programs = Program.objects.filter(
+            active=True,
+            is_judgable=True
+        ).select_related('type').order_by('-created_at')
+        
+        serializer = self.get_serializer(programs, many=True)
+        return Response(serializer.data)
+    
     @action(detail=False, methods=['get'], url_path='dashboard-stats')
     def dashboard_stats(self, request):
         """
@@ -859,82 +877,3 @@ class ProgramFormViewSet(viewsets.ModelViewSet):
             entry.save()
 
         return Response({"message": "Form submitted successfully", "response_id": response.id}, status=201)
-
-
-# class SelfRegistrationAPIView(APIView):
-#     """
-#     Public endpoint allowing a guardian to register one or more
-#     participants for a program in one go.
-#     """
-#     permission_classes = [AllowAny]
-#
-#     def post(self, request, *args, **kwargs):
-#         serializer = SelfRegistrationSerializer(data=request.data)
-#         serializer.is_valid(raise_exception=True)
-#         registrations = serializer.save()
-#         output = RegistrationSerializer(registrations, many=True).data
-#         return Response(output, status=status.HTTP_201_CREATED)
-
-# DJANGO TEMPLATES VIEWS
-# def home(request):
-#     return render(request, 'reg/home.html')
-#
-# def success_page(request, contestant_id):
-#     contestant = Contestant.objects.get(pk=contestant_id)
-#
-#     context = {
-#         'contestant': contestant,
-#     }
-#
-#     return render(request, 'reg/success.html', context)
-#
-# class RegistrationView(View):
-#     template_name = 'reg/register.html'
-#
-#     def get(self, request):
-#         #Rendering the initial form with the 3 sections
-#         form = RegistrationForm()
-#         return render(request, self.template_name, {'form': form})
-#
-#     def post(self, request):
-#         form = RegistrationForm(request.POST)
-#
-#         if form.is_valid():
-#             # Create a parent object first
-#             parent = Parent.objects.create(
-#                 first_name=form.cleaned_data['parent_first_name'],
-#                 last_name=form.cleaned_data['parent_last_name'],
-#                 proffession=form.cleaned_data['parent_proffession'],
-#                 address=form.cleaned_data['parent_address'],
-#                 email=form.cleaned_data['parent_email'],
-#                 phone_number=form.cleaned_data['parent_phone_number'],
-#             )
-#
-#             # Create a new payment object
-#             payment = Payment.objects.create(
-#                 pay_type=form.cleaned_data['pay_type'],
-#                 pay_status='NOT_PAID'
-#             )
-#
-#             # Create a new contestant object
-#             contestant = Contestant.objects.create(
-#                 first_name=form.cleaned_data['contestant_first_name'],
-#                 last_name=form.cleaned_data['contestant_last_name'],
-#                 email=form.cleaned_data['contestant_email'],
-#                 age=form.cleaned_data['contestant_age'],
-#                 gender=form.cleaned_data['contestant_gender'],
-#                 school=form.cleaned_data['contestant_school'],
-#                 parent=parent,
-#                 payment_status=payment
-#             )
-#
-#             #Redirect to the success page if all successful
-#             return redirect('register:success-page', contestant_id=contestant.id)
-#
-#         #If form is not valid, re-render the form with errors
-#         return render(request, self.template_name, {form: form})
-#
-# def contestant_list_view(request):
-#     contestants = Contestant.objects.all()
-#
-#     return render(request, 'reg/contestant_list.html', {'contestants':contestants})

@@ -1,0 +1,19 @@
+category,category_order,criteria,criteria_order,description,guidelines,max_score,weight
+Creativity & Innovation,0,Bonus point,0,,,10.00,0.056
+Creativity & Innovation,0,Build Style,1,,,10.00,0.056
+Creativity & Innovation,0,Combining different materials/resources,2,,,10.00,0.056
+Creativity & Innovation,0,Demonstrate an understanding of material properties,3,,,10.00,0.056
+Creativity & Innovation,0,Uniqueness,4,,,10.00,0.056
+Engineering and crafting,1,Attention to detail,0,,,10.00,0.056
+Engineering and crafting,1,Build Style,1,,,10.00,0.056
+Engineering and crafting,1,Neatness,2,,,10.00,0.056
+Engineering and crafting,1,Quality of execution,3,,,10.00,0.056
+Fun,2,Bonus point,0,,,10.00,0.056
+Fun,2,Did the child have fun building it?,1,,,10.00,0.056
+Fun,2,Linking hobby to the activity,2,,,10.00,0.056
+Fun,2,Passion,3,,,10.00,0.056
+Fun,2,Toy demonstration moment,4,,,10.00,0.056
+Function,3,Applicability,0,,,10.00,0.056
+Function,3,Bonus points,1,,,10.00,0.056
+Function,3,Functionality,2,,,10.00,0.056
+Function,3,Lends itself to more than one use?,3,,,10.00,0.048
