@@ -325,6 +325,8 @@ class ApprovalSerializer(serializers.ModelSerializer):
         return amt
 
     def create(self, validated_data):
+        from decimal import Decimal
+        
         request = self.context.get('request')
         user = getattr(request, 'user', None)
         if not user or not user.is_authenticated:
@@ -332,6 +334,18 @@ class ApprovalSerializer(serializers.ModelSerializer):
         if not getattr(user, 'is_staff', False):
             raise serializers.ValidationError({'detail': 'Only staff members can record approvals.'})
         validated_data['created_by'] = user
+        
+        # Fix: Ensure amount is set for 'paid' status before creating approval
+        # This prevents receipts from being created with amount=0
+        status = validated_data.get('status')
+        amount = validated_data.get('amount')
+        
+        if status == Approval.Status.PAID and (amount is None or amount == 0):
+            reg = validated_data['registration']
+            amount_due = reg.amount_due
+            # Default to full remaining balance
+            validated_data['amount'] = amount_due if amount_due > Decimal('0') else reg.program.registration_fee or Decimal('0')
+        
         approval = super().create(validated_data)
         approval.post_process()
         return approval
