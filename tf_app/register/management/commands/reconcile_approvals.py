@@ -49,8 +49,9 @@ class Command(BaseCommand):
             self.stdout.write(self.style.WARNING('=== DRY RUN MODE - No changes will be made ===\n'))
 
         # Build queryset
-        registrations = Registration.objects.select_related('program', 'participant').prefetch_related(
-            'approvals', 'receipts', 'coupons'
+        # Note: 'coupon' is OneToOne (singular), 'receipts' is ForeignKey (plural)
+        registrations = Registration.objects.select_related('program', 'participant', 'coupon').prefetch_related(
+            'approvals', 'receipts'
         )
 
         if registration_id:
