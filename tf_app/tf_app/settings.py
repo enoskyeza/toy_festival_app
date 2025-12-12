@@ -73,6 +73,7 @@ CORS_ORIGIN_ALLOW_ALL = False  # Dont allow requests from any origin
 
 CORS_ORIGIN_WHITELIST = [
     'http://localhost:3000',
+    'http://localhost:3001',
     'https://app.wokober.com',
     'https://woko-app.netlify.app',
 ]

@@ -3,6 +3,7 @@ from collections import defaultdict
 from copy import deepcopy
 
 from django.shortcuts import get_object_or_404
+from django.db import models
 from django.db import transaction
 from datetime import date
 from typing import Optional
@@ -10,132 +11,11 @@ from typing import Optional
 from rest_framework.exceptions import ValidationError
 from rest_framework import serializers
 from .models import (
-    Payment, Contestant, Parent, Ticket, School, Guardian,
-    Participant, ParticipantGuardian ,ProgramType, Program,
+    School, Guardian, Participant, ParticipantGuardian, ProgramType, Program,
     Registration, Receipt, Approval, Coupon, ProgramForm, FormField,
     FormResponse, FormResponseEntry
 )
-from scores.serializers import ScoreSerializer
 from .forms import RegistrationUtils
-
-
-class PaymentSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Payment
-        fields = ['id', 'payment_method']
-
-
-class ContestantSerializer(serializers.ModelSerializer):
-    identifier = serializers.CharField(read_only=True)
-    age_category = serializers.CharField(read_only=True)
-    parent_name = serializers.SerializerMethodField()
-    scores = ScoreSerializer(many=True, read_only=True)
-
-    payment_method = PaymentSerializer()
-
-    class Meta:
-        model = Contestant
-        fields = [
-            'id', 'identifier', 'first_name', 'last_name', 'email', 'age', 'gender',
-            'school', 'payment_status', 'payment_method', 'parent', 'parent_name', 'age_category', 'scores'
-        ]
-        extra_kwargs = {
-            'age': {
-                'min_value': 3,
-                'max_value': 19,
-                'error_messages': {
-                    'min_value': 'Age cannot be less than 3.',
-                    'max_value': 'Age cannot be greater than 19.'
-                }
-            },
-        }
-
-    def get_parent_name(self, obj):
-        if obj.parent:
-            return f"{obj.parent.first_name} {obj.parent.last_name}"
-        return "No parent assigned"
-
-
-class ParentSerializer(serializers.ModelSerializer):
-    contestants = ContestantSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Parent
-        fields = ['id', 'first_name', 'last_name', 'profession', 'address', 'email', 'phone_number', 'contestants']
-
-
-# Create or Update serializer for Parent with nested Contestant creation
-class ParentCreateUpdateSerializer(serializers.ModelSerializer):
-    contestants = ContestantSerializer(many=True, write_only=True)
-
-    class Meta:
-        model = Parent
-        fields = [
-            'id', 'first_name', 'last_name', 'profession', 'address', 'email', 'phone_number', 'contestants'
-        ]
-
-    def create(self, validated_data):
-        contestants_data = validated_data.pop('contestants', [])
-        parent = Parent.objects.create(**validated_data)
-
-        for contestant_data in contestants_data:
-            payment_data = contestant_data.pop('payment_method', None)
-
-            if payment_data:
-                try:
-                    payment_instance = get_object_or_404(Payment, payment_method=payment_data.get('payment_method'))
-                except ValidationError:
-                    raise ValidationError({"payment_method": "The specified payment method does not exist."})
-
-                contestant_data['payment_method'] = payment_instance
-
-            Contestant.objects.create(parent=parent, **contestant_data)
-
-        return parent
-
-    def update(self, instance, validated_data):
-        contestants_data = validated_data.pop('contestants', [])
-
-        # Update Parent instance
-        for attr, value in validated_data.items():
-            setattr(instance, attr, value)
-        instance.save()
-
-        # Update or create Contestants
-        for contestant_data in contestants_data:
-            payment_data = contestant_data.pop('payment_method', None)
-
-            if payment_data:
-                try:
-                    payment_instance = get_object_or_404(Payment, payment_method=payment_data.get('payment_method'))
-                except ValidationError:
-                    raise ValidationError({"payment_method": "The specified payment method does not exist."})
-
-                contestant_data['payment_method'] = payment_instance
-
-            contestant_id = contestant_data.get('id')
-
-            if contestant_id:
-                # Update existing Contestant
-                contestant = Contestant.objects.get(id=contestant_id, parent=instance)
-                for attr, value in contestant_data.items():
-                    setattr(contestant, attr, value)
-                contestant.save()
-            else:
-                # Create new Contestant linked to Parent
-                Contestant.objects.create(parent=instance, **contestant_data)
-
-        return instance
-
-
-#Ticket serializer
-class TicketSerializer(serializers.ModelSerializer):
-    participant = serializers.PrimaryKeyRelatedField(read_only=True)
-
-    class Meta:
-        model = Ticket
-        fields = ['id', 'participant', 'qr_code', 'created_at', 'updated_at']
-        read_only_fields = ['id', 'qr_code', 'created_at', 'updated_at']
 
 
 # NEW ARCHITECTURE
@@ -184,8 +64,8 @@ class ProgramSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'type', 'type_id', 'year', 'name', 'description', 'long_description',
             'start_date', 'end_date', 'registration_fee', 'age_min', 'age_max', 
-            'capacity', 'requires_ticket', 'active', 'level', 'thumbnail_url', 
-            'video_url', 'instructor', 'featured', 'modules', 'learning_outcomes', 
+            'capacity', 'requires_ticket', 'active', 'is_judgable', 'level', 'thumbnail_url', 
+            'logo', 'video_url', 'instructor', 'featured', 'modules', 'learning_outcomes', 
             'requirements', 'category_label', 'category_options'
         ]
 
@@ -288,13 +168,21 @@ class RegistrationSerializer(serializers.ModelSerializer):
     category_value = serializers.CharField(read_only=True)
     coupon = serializers.SerializerMethodField()
     receipts = ReceiptSummarySerializer(many=True, read_only=True)
+    
+    # Scoring metadata for judge panel
+    has_scores = serializers.SerializerMethodField()
+    scored_by = serializers.SerializerMethodField()
+    judge_count = serializers.SerializerMethodField()
+    comment_count = serializers.SerializerMethodField()
+    program_logo_url = serializers.SerializerMethodField()
 
     class Meta:
         model = Registration
         fields = [
             'id', 'participant', 'program', 'age_at_registration',
             'school_at_registration', 'guardian_at_registration', 'status', 'amount_due',
-            'category_value', 'coupon', 'receipts', 'created_at'
+            'category_value', 'coupon', 'receipts', 'created_at',
+            'has_scores', 'scored_by', 'judge_count', 'comment_count', 'program_logo_url'
         ]
 
     def get_coupon(self, obj):
@@ -304,6 +192,38 @@ class RegistrationSerializer(serializers.ModelSerializer):
             return None
         serializer = CouponSerializer(coupon, context=self.context)
         return serializer.data
+    
+    def get_has_scores(self, obj):
+        """Check if this registration has any judging scores"""
+        return obj.judging_scores.exists()
+    
+    def get_scored_by(self, obj):
+        """Get list of judge usernames who have scored this registration"""
+        # Get distinct judges who have scored this registration
+        judges = obj.judging_scores.values_list(
+            'judge__username', flat=True
+        ).distinct()
+        return list(judges)
+    
+    def get_judge_count(self, obj):
+        """Count how many judges have scored this registration"""
+        return obj.judging_scores.values('judge').distinct().count()
+    
+    def get_comment_count(self, obj):
+        """Count how many comments this participant has"""
+        from scores.models import JudgeComment
+        return JudgeComment.objects.filter(participant=obj.participant).count()
+
+    def get_program_logo_url(self, obj):
+        request = self.context.get('request')
+        logo = getattr(obj.program, 'logo', None)
+        if not logo:
+            return None
+        try:
+            url = logo.url
+        except Exception:
+            return None
+        return request.build_absolute_uri(url) if request else url
 
 
 class ReceiptSerializer(serializers.ModelSerializer):
@@ -313,13 +233,19 @@ class ReceiptSerializer(serializers.ModelSerializer):
     program_name = serializers.CharField(source='registration.program.name', read_only=True)
     participant_name = serializers.SerializerMethodField()
     registration_details = serializers.SerializerMethodField()
+    program_logo_url = serializers.SerializerMethodField()
+    program_fee = serializers.SerializerMethodField()
+    amount_paid_total = serializers.SerializerMethodField()
+    outstanding_balance = serializers.SerializerMethodField()
 
     class Meta:
         model = Receipt
         fields = [
             'id', 'registration', 'registration_id', 'registration_details',
             'status', 'issued_by', 'issued_by_name', 'amount', 
-            'program_name', 'participant_name', 'created_at', 'updated_at'
+            'program_name', 'participant_name', 'program_logo_url',
+            'program_fee', 'amount_paid_total', 'outstanding_balance',
+            'created_at', 'updated_at'
         ]
 
     def get_registration(self, obj):
@@ -361,6 +287,29 @@ class ReceiptSerializer(serializers.ModelSerializer):
             }
         
         return data
+
+    def get_program_logo_url(self, obj):
+        request = self.context.get('request')
+        logo = getattr(obj.registration.program, 'logo', None)
+        if not logo:
+            return None
+        try:
+            url = logo.url
+        except Exception:
+            return None
+        return request.build_absolute_uri(url) if request else url
+
+    def get_program_fee(self, obj):
+        fee = obj.registration.program.registration_fee
+        return str(fee or 0)
+
+    def get_amount_paid_total(self, obj):
+        # Total paid across all approvals (more reliable than a single receipt.amount)
+        total = obj.registration.approvals.aggregate(total=models.Sum('amount'))['total']
+        return str(total or 0)
+
+    def get_outstanding_balance(self, obj):
+        return str(obj.registration.amount_due)
 
 
 class ApprovalSerializer(serializers.ModelSerializer):
@@ -1283,3 +1232,34 @@ class DynamicFormSubmissionSerializer(serializers.Serializer):
                     if ext not in field.allowed_file_types:
                         raise serializers.ValidationError({field.field_name: f"Invalid file type '.{ext}'"})
         return data
+
+
+# JUDGING SYSTEM SERIALIZERS
+class RegistrationWithParticipantSerializer(serializers.ModelSerializer):
+    """Serializer for judge panel to display paid registrations."""
+    participant = ParticipantSerializer(read_only=True)
+    program_name = serializers.CharField(source='program.name', read_only=True)
+    program_id = serializers.IntegerField(source='program.id', read_only=True)
+    category_value = serializers.CharField(read_only=True)
+    school_name = serializers.CharField(source='school_at_registration.name', read_only=True, allow_null=True)
+    has_judge_scores = serializers.SerializerMethodField()
+    points = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Registration
+        fields = [
+            'id', 'participant', 'program_name', 'program_id', 'age_at_registration',
+            'category_value', 'school_name', 'status', 'has_judge_scores', 'points'
+        ]
+    
+    def get_has_judge_scores(self, obj):
+        """Check if current judge has scored this participant."""
+        judge_id = self.context.get('judge_id')
+        if not judge_id:
+            return False
+        return obj.points.filter(judge_id=judge_id).exists()
+    
+    def get_points(self, obj):
+        """Get all points/scores for this registration."""
+        from scores.serializers import PointSerializer
+        return PointSerializer(obj.points.all(), many=True).data
