@@ -375,7 +375,7 @@ class ResultsService:
         # Get all registrations for program
         registrations = Registration.objects.filter(
             program=program,
-            status='PAID'
+            status='paid'
         )
         
         if category_value:
