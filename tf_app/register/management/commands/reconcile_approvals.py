@@ -149,13 +149,12 @@ class Command(BaseCommand):
             for zero_approval in zero_approvals:
                 self.stdout.write(f"     Removing approval {zero_approval.id} (amount=0)")
                 if not dry_run:
-                    # Transfer receipt/coupon to valid approval if needed
-                    if zero_approval.receipt and not any(a.receipt for a in valid_approvals):
-                        valid_approvals[0].receipt = zero_approval.receipt
-                        valid_approvals[0].save(update_fields=['receipt'])
-                    if zero_approval.coupon and not any(a.coupon for a in valid_approvals):
-                        valid_approvals[0].coupon = zero_approval.coupon
-                        valid_approvals[0].save(update_fields=['coupon'])
+                    # Clear the receipt/coupon FK on the zero-amount approval before deleting
+                    # The valid approval should already have its own receipt/coupon
+                    # If not, we'll create them later in the script
+                    zero_approval.receipt = None
+                    zero_approval.coupon = None
+                    zero_approval.save(update_fields=['receipt', 'coupon'])
                     zero_approval.delete()
                 result['duplicates_removed'] += 1
 
