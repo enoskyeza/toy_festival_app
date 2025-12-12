@@ -343,8 +343,11 @@ class ApprovalSerializer(serializers.ModelSerializer):
         if status == Approval.Status.PAID and (amount is None or amount == 0):
             reg = validated_data['registration']
             amount_due = reg.amount_due
+            # Reject if nothing is owed
+            if amount_due <= Decimal('0'):
+                raise serializers.ValidationError({'detail': 'This registration is already fully paid.'})
             # Default to full remaining balance
-            validated_data['amount'] = amount_due if amount_due > Decimal('0') else reg.program.registration_fee or Decimal('0')
+            validated_data['amount'] = amount_due
         
         approval = super().create(validated_data)
         approval.post_process()
