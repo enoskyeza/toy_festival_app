@@ -460,7 +460,7 @@ class Registration(BaseModel):
     @property
     def amount_due(self) -> Decimal:
         fee = self.program.registration_fee or Decimal('0')
-        paid = self.approvals.aggregate(
+        paid = self.approvals.filter(status='paid').aggregate(
             total=models.Sum('amount')
         )['total'] or Decimal('0')
         return fee - paid
@@ -610,7 +610,13 @@ class Approval(BaseModel):
         # Side-effects for payment
         if self.status == self.Status.PAID:
             paid_amount = self.amount
-            amount_due_before = reg.amount_due
+            # Calculate amount_due EXCLUDING this approval (since it's already saved)
+            # Only count PAID approvals
+            fee = reg.program.registration_fee or Decimal('0')
+            paid_before_this = reg.approvals.filter(status='paid').exclude(pk=self.pk).aggregate(
+                total=models.Sum('amount')
+            )['total'] or Decimal('0')
+            amount_due_before = fee - paid_before_this
             
             if paid_amount > amount_due_before:
                 raise ValidationError("Cannot pay more than the amount due.")
